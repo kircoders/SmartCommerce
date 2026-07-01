@@ -16,7 +16,7 @@
 
 import { User } from '@/types/user';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://smartcommerce-alb-632503281.us-east-1.elb.amazonaws.com/api';
 
 export interface RegisterData {
   firstName: string;
