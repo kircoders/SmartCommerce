@@ -6,7 +6,18 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { Request, Response } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { logger: ['log', 'error', 'warn'] });
+  const app = await NestFactory.create(AppModule, {
+    logger: ['log', 'error', 'warn'],
+    rawBody: false,
+  });
+  app.useLogger({
+    log: (msg: string) => process.stdout.write(msg.replace(/\x1B\[[0-9;]*m/g, '') + '\n'),
+    error: (msg: string) => process.stderr.write(msg.replace(/\x1B\[[0-9;]*m/g, '') + '\n'),
+    warn: (msg: string) => process.stdout.write(msg.replace(/\x1B\[[0-9;]*m/g, '') + '\n'),
+    debug: () => {},
+    verbose: () => {},
+    fatal: (msg: string) => process.stderr.write(msg.replace(/\x1B\[[0-9;]*m/g, '') + '\n'),
+  });
 
   app.setGlobalPrefix('api');
 
