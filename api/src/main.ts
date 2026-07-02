@@ -24,6 +24,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3001',
       'https://main.dwdi02ueunudy.amplifyapp.com',
+      'https://d1k5e466mkmb2q.cloudfront.net',
     ],
     credentials: true,
   });

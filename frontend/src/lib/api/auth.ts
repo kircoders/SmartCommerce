@@ -16,7 +16,7 @@
 
 import { User } from '@/types/user';
 
-const API_URL = 'http://smartcommerce-alb-632503281.us-east-1.elb.amazonaws.com/api';
+const API_URL = 'https://d1k5e466mkmb2q.cloudfront.net/api';
 
 export interface RegisterData {
   firstName: string;
