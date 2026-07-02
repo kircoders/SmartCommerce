@@ -20,6 +20,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/lib/api/auth';
+import AnnouncementBanner from '@/components/ui/AnnouncementBanner';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -38,13 +39,16 @@ export default function AdminDashboard() {
   if (!user) return null;
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="h4" sx={{ mb: 2 }}>Admin Dashboard</Typography>
-        <Typography variant="body1" sx={{ mb: 4 }}>
-          Welcome, {user.firstName}! You are logged in as {user.role}.
-        </Typography>
-        <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+    <Box>
+      <AnnouncementBanner />
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h4" sx={{ mb: 2 }}>Admin Dashboard</Typography>
+          <Typography variant="body1" sx={{ mb: 4 }}>
+            Welcome, {user.firstName}! You are logged in as {user.role}.
+          </Typography>
+          <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+        </Box>
       </Box>
     </Box>
   );

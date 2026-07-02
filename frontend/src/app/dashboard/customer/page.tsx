@@ -19,6 +19,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { useAuth } from '@/hooks/useAuth';
 import { logout } from '@/lib/api/auth';
+import AnnouncementBanner from '@/components/ui/AnnouncementBanner';
 
 export default function CustomerDashboard() {
   const router = useRouter();
@@ -37,7 +38,9 @@ export default function CustomerDashboard() {
   if (!user) return null;
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+    <Box>
+      <AnnouncementBanner />
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
       <Box sx={{ textAlign: 'center' }}>
         <Typography variant="h4" sx={{ mb: 2 }}>Customer Dashboard</Typography>
         <Typography variant="body1" sx={{ mb: 4 }}>
@@ -45,6 +48,7 @@ export default function CustomerDashboard() {
         </Typography>
         <Button variant="outlined" onClick={() => router.push('/profile')} sx={{ mr: 2 }}>My Profile</Button>
         <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+      </Box>
       </Box>
     </Box>
   );
