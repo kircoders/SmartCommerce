@@ -42,7 +42,7 @@ async function bootstrap() {
 
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.get('/api/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', container: process.env.HOSTNAME ?? 'unknown' });
   });
 
   const config = app.get(ConfigService);
