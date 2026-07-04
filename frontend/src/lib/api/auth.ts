@@ -6,7 +6,7 @@
 // WHY IT EXISTS:
 // Instead of writing raw fetch() calls scattered across every page,
 // all backend communication is centralized here. Pages just call these
-// functions and get back clean data — they don't need to know anything
+// functions and get back clean data â€” they don't need to know anything
 // about HTTP, headers, or JSON parsing.
 //
 // WHAT'S IN IT:
@@ -16,7 +16,7 @@
 
 import { User } from '@/types/user';
 
-const API_URL = 'https://d1k5e466mkmb2q.cloudfront.net/api';
+const API_URL = 'https://3hfuwvhp27.us-east-1.awsapprunner.com/api';
 
 export interface RegisterData {
   firstName: string;

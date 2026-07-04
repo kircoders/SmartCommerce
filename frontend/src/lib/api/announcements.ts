@@ -1,4 +1,4 @@
-const API_URL = 'https://d1k5e466mkmb2q.cloudfront.net/api';
+const API_URL = 'https://3hfuwvhp27.us-east-1.awsapprunner.com/api';
 
 export async function getAnnouncement(): Promise<string> {
   try {

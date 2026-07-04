@@ -1,6 +1,6 @@
 // WHAT THIS FILE IS:
 // The API client for all user profile-related requests to the backend.
-// Similar to auth.ts, these are plain functions that make HTTP requests —
+// Similar to auth.ts, these are plain functions that make HTTP requests â€”
 // no UI, no components, just data fetching.
 //
 // WHY IT EXISTS:
@@ -13,11 +13,11 @@
 // - updateProfile(): sends PUT /api/users/me with updated fields, returns the updated user
 //
 // NOTE: Both functions require the JWT token to be passed in because these
-// are protected endpoints — the backend rejects requests without a valid token.
+// are protected endpoints â€” the backend rejects requests without a valid token.
 
 import { User } from '@/types/user';
 
-const API_URL = 'https://d1k5e466mkmb2q.cloudfront.net/api';
+const API_URL = 'https://3hfuwvhp27.us-east-1.awsapprunner.com/api';
 
 export interface UpdateProfileData {
   firstName?: string;

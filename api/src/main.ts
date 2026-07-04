@@ -31,12 +31,18 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  const allowedOrigins = [
+    'http://localhost:3001',
+    'https://main.dwdi02ueunudy.amplifyapp.com',
+  ];
   app.enableCors({
-    origin: [
-      'http://localhost:3001',
-      'https://main.dwdi02ueunudy.amplifyapp.com',
-      'https://d1k5e466mkmb2q.cloudfront.net',
-    ],
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.awsapprunner.com')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
