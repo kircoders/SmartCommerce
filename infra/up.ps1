@@ -1,54 +1,74 @@
 # SmartCommerce — start the API
 # First time: terraform apply (creates App Runner service, ~3 min)
-# After that:  resumes the paused service (~30 sec)
+# After that:  starts RDS + resumes App Runner (~5 min total)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$RdsId = "database-1"
 
 Write-Host ""
-Write-Host "=== SmartCommerce: Starting API ===" -ForegroundColor Cyan
+Write-Host "=== SmartCommerce: Starting ===" -ForegroundColor Cyan
 
-# Check if App Runner service already exists
+# ── Step 1: Start RDS if stopped ────────────────────────────────────────────
+$RdsStatus = (aws rds describe-db-instances --db-instance-identifier $RdsId --query "DBInstances[0].DBInstanceStatus" --output text)
+Write-Host "[1/2] RDS status: $RdsStatus"
+
+if ($RdsStatus -eq "stopped") {
+    Write-Host "      Starting RDS (~5 min)..." -ForegroundColor Yellow
+    aws rds start-db-instance --db-instance-identifier $RdsId | Out-Null
+
+    do {
+        Start-Sleep -Seconds 20
+        $RdsStatus = (aws rds describe-db-instances --db-instance-identifier $RdsId --query "DBInstances[0].DBInstanceStatus" --output text)
+        Write-Host "      RDS status: $RdsStatus"
+    } while ($RdsStatus -ne "available")
+
+    Write-Host "      RDS is available." -ForegroundColor Green
+} elseif ($RdsStatus -eq "available") {
+    Write-Host "      RDS already running." -ForegroundColor Green
+} else {
+    Write-Host "      RDS is $RdsStatus — waiting..." -ForegroundColor Yellow
+    do {
+        Start-Sleep -Seconds 20
+        $RdsStatus = (aws rds describe-db-instances --db-instance-identifier $RdsId --query "DBInstances[0].DBInstanceStatus" --output text)
+        Write-Host "      RDS status: $RdsStatus"
+    } while ($RdsStatus -ne "available")
+}
+
+# ── Step 2: Resume App Runner ────────────────────────────────────────────────
 $Services = aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api']" --output json | ConvertFrom-Json
 
 if ($Services.Count -eq 0) {
-    # ── First time: create everything via Terraform ──────────────────────────
-    Write-Host "First time setup — running terraform apply (~3 min)..." -ForegroundColor Yellow
-    Write-Host ""
+    Write-Host "[2/2] First time setup — running terraform apply (~3 min)..." -ForegroundColor Yellow
     terraform apply -auto-approve
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
     $AppRunnerUrl = terraform output -raw apprunner_url
 
 } elseif ($Services[0].Status -eq "PAUSED") {
-    # ── Existing service: just resume it ────────────────────────────────────
-    Write-Host "Resuming paused service (~30 sec)..." -ForegroundColor Yellow
+    Write-Host "[2/2] Resuming App Runner..." -ForegroundColor Yellow
     aws apprunner resume-service --service-arn $Services[0].ServiceArn | Out-Null
 
-    Write-Host "Waiting for service to become running..."
     do {
         Start-Sleep -Seconds 10
         $Status = (aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api'].Status" --output text)
-        Write-Host "  Status: $Status"
+        Write-Host "      App Runner status: $Status"
     } while ($Status -ne "RUNNING")
 
     $AppRunnerUrl = "https://$($Services[0].ServiceUrl)"
 
 } else {
+    Write-Host "[2/2] App Runner already $($Services[0].Status)." -ForegroundColor Green
     $AppRunnerUrl = "https://$($Services[0].ServiceUrl)"
-    Write-Host "Service is already $($Services[0].Status)." -ForegroundColor Green
 }
 
-# ── Update frontend API URL ──────────────────────────────────────────────────
+# ── Update frontend API URL if needed ───────────────────────────────────────
 $ApiBase = "$AppRunnerUrl/api"
 $FrontendApiDir = Join-Path $ProjectRoot "frontend\src\lib\api"
-
-$FilesToUpdate = @("auth.ts", "users.ts", "announcements.ts")
 $Updated = $false
-foreach ($File in $FilesToUpdate) {
+foreach ($File in @("auth.ts", "users.ts", "announcements.ts")) {
     $Path = Join-Path $FrontendApiDir $File
     if (Test-Path $Path) {
         $Content = Get-Content $Path -Raw
@@ -62,8 +82,8 @@ foreach ($File in $FilesToUpdate) {
 }
 
 Write-Host ""
-Write-Host "=== API is UP ===" -ForegroundColor Green
-Write-Host "URL: $AppRunnerUrl" -ForegroundColor Cyan
+Write-Host "=== Everything is UP ===" -ForegroundColor Green
+Write-Host "API: $AppRunnerUrl" -ForegroundColor Cyan
 Write-Host ""
 
 if ($Updated) {
