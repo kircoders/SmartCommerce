@@ -39,7 +39,8 @@ if ($RdsStatus -eq "stopped") {
 }
 
 # ── Step 2: Resume App Runner ────────────────────────────────────────────────
-$Services = aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api']" --output json | ConvertFrom-Json
+$ServicesJson = aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api']" --output json
+$Services = if ($ServicesJson) { $ServicesJson | ConvertFrom-Json } else { @() }
 
 if ($Services.Count -eq 0) {
     Write-Host "[2/2] First time setup — running terraform apply (~3 min)..." -ForegroundColor Yellow
