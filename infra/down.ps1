@@ -44,6 +44,6 @@ if ($RdsStatus -eq "stopped") {
 
 Write-Host ""
 Write-Host "=== Everything is DOWN ===" -ForegroundColor Green
-Write-Host "Monthly cost while down: ~`$0.50 (RDS storage + Secrets Manager only)" -ForegroundColor Cyan
-Write-Host "Resume with: .\up.ps1  (~5 min for RDS to start)" -ForegroundColor Yellow
+Write-Host "Monthly cost while down: ~0.50/month (RDS storage + Secrets Manager only)" -ForegroundColor Cyan
+Write-Host "Resume with: up.ps1  (~5 min for RDS to start)" -ForegroundColor Yellow
 Write-Host ""
