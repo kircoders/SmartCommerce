@@ -1,4 +1,4 @@
-# SmartCommerce — build and deploy a new backend image
+# SmartCommerce - build and deploy a new backend image
 # Run this whenever you change API code.
 
 Set-StrictMode -Version Latest
@@ -38,8 +38,8 @@ if ($ServiceArn) {
     aws apprunner start-deployment --service-arn $ServiceArn | Out-Null
     Write-Host "Deployment triggered. Takes ~1-2 min to roll out." -ForegroundColor Green
 } else {
-    Write-Host "No running App Runner service found — image pushed but not deployed yet." -ForegroundColor Yellow
-    Write-Host "Run .\up.ps1 to create the service." -ForegroundColor Yellow
+    Write-Host "No running App Runner service found - image pushed but not deployed yet." -ForegroundColor Yellow
+    Write-Host "Run up.ps1 to create the service." -ForegroundColor Yellow
 }
 
 Write-Host ""

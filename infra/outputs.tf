@@ -7,3 +7,13 @@ output "apprunner_service_arn" {
   description = "App Runner service ARN (used by up.ps1 / down.ps1)"
   value       = aws_apprunner_service.api.arn
 }
+
+output "s3_bucket_name" {
+  description = "S3 bucket for product images"
+  value       = aws_s3_bucket.product_images.bucket
+}
+
+output "s3_bucket_region" {
+  description = "Region of the S3 bucket"
+  value       = var.aws_region
+}

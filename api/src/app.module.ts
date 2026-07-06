@@ -5,6 +5,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { AuthModule } from './auth/auth.module';
 import configuration from './config/configuration';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { ProductsModule } from './products/products.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     AnnouncementsModule,
+    ProductsModule,
   ],
 })
 export class AppModule implements NestModule {

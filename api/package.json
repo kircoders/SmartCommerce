@@ -23,6 +23,7 @@
     "migration:revert": "typeorm-ts-node-commonjs -d data-source.ts migration:revert"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1080.0",
     "@aws-sdk/client-ssm": "^3.1079.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -31,9 +32,11 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.3",
+    "@types/multer": "^2.2.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "multer": "^2.2.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.22.0",
