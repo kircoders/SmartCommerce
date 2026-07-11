@@ -21,17 +21,32 @@ import { ProductEntity } from './entities/product.entity';
 const BUCKET = 'smartcommerce-product-images-452698428461';
 const REGION = 'us-east-1';
 
+// All the actual business logic for the products module lives here - both
+// controllers (products.controller.ts, admin-products.controller.ts) just
+// parse the request and delegate to a method on this class. This is where
+// DTOs (already-validated request data) get turned into entities (real
+// database rows), and where TypeORM and the S3 SDK get called side by side.
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
   private readonly s3 = new S3Client({ region: REGION });
 
+  // @InjectRepository gives this class a TypeORM Repository scoped to each
+  // entity - the actual object with .find()/.save()/.remove() on it,
+  // pre-wired to the right table. NestJS constructs this class and injects
+  // these automatically; nothing ever does `new ProductsService(...)`.
   constructor(
     @InjectRepository(ProductEntity)
     private readonly productRepo: Repository<ProductEntity>,
     @InjectRepository(ProductImageEntity)
     private readonly imageRepo: Repository<ProductImageEntity>,
   ) {}
+
+  // All three read methods below share the same shape: filter to
+  // isActive: true (the soft-delete flag - inactive products never show up
+  // here), and eager-load relations: { images: true } so each product comes
+  // back with its images already joined in, instead of a separate query per
+  // product.
 
   async findAll(): Promise<ProductEntity[]> {
     return this.productRepo.find({
@@ -50,6 +65,12 @@ export class ProductsService {
     return product;
   }
 
+  // ILike = case-insensitive LIKE. An array passed to `where` means OR in
+  // TypeORM, so this reads as "name matches the search term OR description
+  // matches" - not AND. Wildcards on both sides ('%q%') mean this can't
+  // fully use the idx_products_name index from the migration; fine at this
+  // table's current size, would need a different index type (e.g. pg_trgm)
+  // to stay fast at a much larger scale.
   async search(q: string): Promise<ProductEntity[]> {
     return this.productRepo.find({
       where: [
@@ -61,6 +82,11 @@ export class ProductsService {
     });
   }
 
+  // dto arrives here already validated by CreateProductDto's decorators
+  // (enforced by the global ValidationPipe before this method ever runs).
+  // userId comes from the controller's @CurrentUser() - the authenticated
+  // caller, not anything the client can claim in the request body - so a
+  // user can never set createdBy to someone else's id.
   async create(dto: CreateProductDto, userId: string): Promise<ProductEntity> {
     const product = this.productRepo.create({
       name: dto.name,
@@ -72,6 +98,12 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
+  // Object.assign only overwrites properties that actually exist on dto -
+  // this is what makes a *partial* update work correctly. Since
+  // UpdateProductDto makes every field optional, sending just { price: 24.99 }
+  // leaves name/description/isActive untouched on the existing entity.
+  // TypeORM generates an UPDATE (not an INSERT) here because `product`
+  // already has an id from the findOne() above.
   async update(id: string, dto: UpdateProductDto): Promise<ProductEntity> {
     const product = await this.productRepo.findOne({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
@@ -79,6 +111,12 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
+  // Deleting a product has to clean up two different systems: S3 (files)
+  // and Postgres (rows). Postgres can't reach into S3 on its own, so every
+  // image's actual file gets deleted manually here, BEFORE the product row
+  // itself is removed. The image *rows* don't need manual deletion though -
+  // product_images.product_id has ON DELETE CASCADE (see the migration), so
+  // productRepo.remove() triggers Postgres to delete them automatically.
   async remove(id: string): Promise<void> {
     const product = await this.productRepo.findOne({
       where: { id },
@@ -97,12 +135,20 @@ export class ProductsService {
     file: { buffer: Buffer; originalname: string; mimetype: string },
     isPrimary: boolean,
   ): Promise<ProductImageEntity> {
+    // Verify-then-act: confirm the product actually exists before touching
+    // S3 at all, so a bad productId never orphans a file with nothing to
+    // attach it to.
     const product = await this.productRepo.findOne({ where: { id: productId } });
     if (!product) throw new NotFoundException('Product not found');
 
+    // Random UUID filename (not the original filename) so two uploads can
+    // never collide, even if both are literally named "photo.jpg".
+    // Namespaced under products/{productId}/ so one product's images sit
+    // together in the bucket.
     const ext = file.originalname.split('.').pop() ?? 'jpg';
     const s3Key = `products/${productId}/${randomUUID()}.${ext}`;
 
+    // The actual network call to S3 - uploads the raw file bytes.
     await this.s3.send(
       new PutObjectCommand({
         Bucket: BUCKET,
@@ -114,6 +160,10 @@ export class ProductsService {
 
     const url = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${s3Key}`;
 
+    // "Only one image can be primary" isn't a database constraint - it's
+    // enforced here, procedurally: a bulk UPDATE (no findOne/save
+    // round-trip) flips every existing image on this product to
+    // isPrimary: false, run BEFORE inserting the new one as primary.
     if (isPrimary) {
       await this.imageRepo.update({ productId }, { isPrimary: false });
     }
@@ -131,6 +181,12 @@ export class ProductsService {
     await this.imageRepo.remove(image);
   }
 
+  // private = only callable from within this class, shared by remove() and
+  // deleteImage(). The try/catch here is a deliberate exception to letting
+  // errors propagate elsewhere in this file: if S3 fails to delete, we log
+  // it and move on rather than blocking the whole product/image deletion.
+  // Tradeoff being accepted: a rare orphaned S3 file is preferable to a
+  // delete operation that can never complete because S3 had a bad moment.
   private async deleteFromS3(s3Key: string): Promise<void> {
     try {
       await this.s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: s3Key }));

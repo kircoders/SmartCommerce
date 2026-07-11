@@ -17,8 +17,7 @@
 // - logout(): sends POST /api/auth/logout to end the session on the backend
 
 import { User } from '@/types/user';
-
-const API_URL = 'https://3hfuwvhp27.us-east-1.awsapprunner.com/api';
+import { API_URL } from './config';
 
 export interface RegisterData {
   firstName: string;

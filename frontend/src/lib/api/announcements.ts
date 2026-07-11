@@ -1,6 +1,6 @@
 // Phase 1
 
-const API_URL = 'https://3hfuwvhp27.us-east-1.awsapprunner.com/api';
+import { API_URL } from './config';
 
 export async function getAnnouncement(): Promise<string> {
   try {

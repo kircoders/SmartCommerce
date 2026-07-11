@@ -77,22 +77,19 @@ if ($Services.Count -eq 0) {
 }
 
 # Update frontend API URL if needed
-# The App Runner URL can change (e.g. after a from-scratch terraform apply),
-# so this rewrites the frontend's hardcoded API_URL constant to match
-# whatever URL is actually live right now, across all files that define one.
+# The App Runner URL can change (e.g. after a from-scratch terraform apply).
+# All frontend API clients import API_URL from lib/api/config.ts's fallback
+# now (see that file), so only this one file needs rewriting - not four.
 $ApiBase = "$AppRunnerUrl/api"
-$FrontendApiDir = Join-Path $ProjectRoot "frontend\src\lib\api"
+$ConfigPath = Join-Path $ProjectRoot "frontend\src\lib\api\config.ts"
 $Updated = $false
-foreach ($File in @("auth.ts", "users.ts", "announcements.ts", "products.ts")) {
-    $Path = Join-Path $FrontendApiDir $File
-    if (Test-Path $Path) {
-        $Content = Get-Content $Path -Raw
-        $NewContent = $Content -replace "const API_URL = '[^']*'", "const API_URL = '$ApiBase'"
-        if ($Content -ne $NewContent) {
-            [System.IO.File]::WriteAllText($Path, $NewContent, [System.Text.UTF8Encoding]::new($false))
-            Write-Host "Updated API_URL in $File" -ForegroundColor Green
-            $Updated = $true
-        }
+if (Test-Path $ConfigPath) {
+    $Content = Get-Content $ConfigPath -Raw
+    $NewContent = $Content -replace "\?\? '[^']*'", "?? '$ApiBase'"
+    if ($Content -ne $NewContent) {
+        [System.IO.File]::WriteAllText($ConfigPath, $NewContent, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "Updated API_URL fallback in lib/api/config.ts" -ForegroundColor Green
+        $Updated = $true
     }
 }
 

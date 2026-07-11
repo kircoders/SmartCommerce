@@ -1,0 +1,23 @@
+SmartCommerce - Deployed URLs
+==============================
+
+Frontend (Amplify):
+  https://main.dwdi02ueunudy.amplifyapp.com
+
+Backend API (App Runner):
+  https://3hfuwvhp27.us-east-1.awsapprunner.com/api
+
+Backend health check (no login needed):
+  https://3hfuwvhp27.us-east-1.awsapprunner.com/api/health
+
+Notes:
+- These will only respond if App Runner + RDS are running. If you paused
+  them with down.ps1/down.bat, run up.ps1/up.bat first (backend takes a
+  few minutes to come back up).
+- Frontend redeploys automatically on every push to main (Amplify watches
+  the GitHub repo). Backend does NOT - you must run deploy.ps1/deploy.bat
+  after backend code changes for them to actually go live here.
+- If the App Runner URL ever changes (e.g. after a from-scratch
+  terraform apply), up.ps1 automatically rewrites it into this file's
+  frontend/src/lib/api/*.ts counterparts - but not into this file, so
+  double check here if things stop working after a fresh deploy.

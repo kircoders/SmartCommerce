@@ -10,13 +10,8 @@
 // - createProduct() / updateProduct() / deleteProduct(): admin-only writes
 // - uploadProductImage() / deleteProductImage(): admin-only image management
 //
-// NOTE: API_URL gets rewritten automatically by infra/up.ps1 whenever the
-// App Runner URL changes - don't hardcode a different pattern here than the
-// other lib/api files use, or up.ps1's find/replace will silently skip it.
-
 import { Product, ProductImage } from '@/types/product';
-
-const API_URL = 'https://3hfuwvhp27.us-east-1.awsapprunner.com/api';
+import { API_URL } from './config';
 
 export interface ProductFormData {
   name: string;
