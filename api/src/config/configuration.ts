@@ -1,3 +1,5 @@
+// Phase 1
+
 export default () => ({
   port: parseInt(process.env['PORT'] ?? '3000', 10),
   database: {

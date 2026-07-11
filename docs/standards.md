@@ -1,3 +1,5 @@
+<!-- Phase 1 -->
+
 # SmartCommerce — Code Standards
 
 ## Tech Stack

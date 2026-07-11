@@ -1,3 +1,5 @@
+// Phase 1
+
 // WHAT THIS FILE IS:
 // The root layout — the outer shell that wraps every single page in the app.
 // In Next.js App Router, layout.tsx is special: it stays mounted while you

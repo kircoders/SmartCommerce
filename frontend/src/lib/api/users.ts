@@ -1,3 +1,5 @@
+// Phase 1
+
 // WHAT THIS FILE IS:
 // The API client for all user profile-related requests to the backend.
 // Similar to auth.ts, these are plain functions that make HTTP requests â€”

@@ -1,3 +1,5 @@
+// Phase 2
+
 import {
   Body,
   Controller,
@@ -22,12 +24,31 @@ import { ProductImageEntity } from './entities/product-image.entity';
 import { ProductEntity } from './entities/product.entity';
 import { ProductsService } from './products.service';
 
+// Admin-only routes for managing the catalog (create/update/delete products
+// and their images). Contrast with products.controller.ts, which exposes
+// read-only routes any logged-in user can hit.
+//
+// Both guards run on every route in this class, in order, before any
+// handler code executes:
+//   1. JwtAuthGuard - must be logged in with a valid JWT at all.
+//   2. RolesGuard + @Roles(UserRole.ADMIN) - and that user's role must be
+//      ADMIN specifically. Non-admins get rejected here, never reaching
+//      the database.
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @Controller('admin/products')
 export class AdminProductsController {
+  // NestJS injects the service - all the actual DB/S3 logic lives there.
+  // This controller stays "thin": parse the request, call the service,
+  // shape the response.
   constructor(private readonly productsService: ProductsService) {}
 
+  // POST /admin/products
+  // Creates a new product. `dto` is auto-validated against CreateProductDto
+  // (class-validator) before this method ever runs - if validation fails,
+  // NestJS returns a 400 automatically.
+  // @CurrentUser() pulls the logged-in user off the request (attached by
+  // JwtAuthGuard) so we know who to credit as the creator.
   @Post()
   async create(
     @Body() dto: CreateProductDto,
@@ -37,6 +58,9 @@ export class AdminProductsController {
     return { data };
   }
 
+  // PUT /admin/products/:id
+  // Partial update - UpdateProductDto makes every field optional, so you
+  // only need to send the fields you're changing.
   @Put(':id')
   async update(
     @Param('id') id: string,
@@ -46,12 +70,22 @@ export class AdminProductsController {
     return { data };
   }
 
+  // DELETE /admin/products/:id
+  // Deletes the product AND all of its S3 images (handled inside the
+  // service, not here) - this route just triggers it.
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<{ data: null; message: string }> {
     await this.productsService.remove(id);
     return { data: null, message: 'Product deleted' };
   }
 
+  // POST /admin/products/:id/images
+  // Uploads one image for a product. FileInterceptor('file') tells NestJS
+  // to expect a multipart/form-data request with a field named "file", and
+  // hands the raw bytes to this handler as `file.buffer`.
+  // ?primary=true marks this as the product's main/cover image - note the
+  // query param arrives as a string ("true"/"false"), hence the explicit
+  // comparison rather than treating it as a boolean directly.
   @Post(':id/images')
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(
@@ -63,6 +97,9 @@ export class AdminProductsController {
     return { data };
   }
 
+  // DELETE /admin/products/:id/images/:imageId
+  // Deletes one specific image off a product (both the S3 object and its
+  // DB row - handled in the service).
   @Delete(':id/images/:imageId')
   async deleteImage(
     @Param('id') id: string,

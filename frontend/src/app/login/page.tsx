@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 // WHAT THIS FILE IS:
 // The Login page — what the user sees at http://localhost:3001/login.
 // This is a Client Component (notice 'use client' at the top) because it

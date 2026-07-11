@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import { getAnnouncement } from '@/lib/api/announcements';

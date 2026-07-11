@@ -1,3 +1,5 @@
+// Phase 2
+
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SearchProductsDto } from './dto/search-products.dto';

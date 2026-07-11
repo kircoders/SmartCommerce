@@ -1,3 +1,5 @@
+<!-- Phase 1 -->
+
 # SmartCommerce — Claude Instructions
 
 ## Project Overview

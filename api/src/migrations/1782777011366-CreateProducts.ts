@@ -1,3 +1,5 @@
+// Phase 2
+
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateProducts1782777011366 implements MigrationInterface {

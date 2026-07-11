@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 // WHAT THIS FILE IS:
 // The Register page — what the user sees at http://localhost:3001/register.
 // Only customers can self-register. Other roles (admin, support, etc.)

@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 // WHAT THIS FILE IS:
 // A custom React hook that manages the logged-in user's authentication state.
 // A "hook" in React is a reusable function that any component can call to

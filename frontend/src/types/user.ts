@@ -1,3 +1,5 @@
+// Phase 1
+
 // WHAT THIS FILE IS:
 // A TypeScript "type definition" file. It doesn't run any code, make any API calls,
 // or display anything on screen. It simply describes what a User object looks like —

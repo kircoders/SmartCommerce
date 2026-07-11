@@ -1,4 +1,9 @@
-# SmartCommerce — pause App Runner + stop RDS
+﻿# Phase 1
+
+# SmartCommerce - pause App Runner + stop RDS
+# Shuts down the two things that cost money while idle: the App Runner
+# compute and the RDS database. Everything else (S3, Secrets Manager, the
+# App Runner service definition itself) stays put and costs pennies.
 # Resume with: .\up.ps1
 
 Set-StrictMode -Version Latest
@@ -9,17 +14,20 @@ $RdsId = "database-1"
 Write-Host ""
 Write-Host "=== SmartCommerce: Shutting down ===" -ForegroundColor Yellow
 
-# ── Step 1: Pause App Runner ─────────────────────────────────────────────────
+# Step 1: Pause App Runner
+# Look up the service by name via the AWS CLI and parse its JSON into a
+# PowerShell object so we can inspect .Status / .ServiceArn below.
 $Services = aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api']" --output json | ConvertFrom-Json
 
 if ($Services.Count -eq 0) {
-    Write-Host "[1/2] No App Runner service found — skipping." -ForegroundColor Yellow
+    Write-Host "[1/2] No App Runner service found - skipping." -ForegroundColor Yellow
 } elseif ($Services[0].Status -eq "PAUSED") {
     Write-Host "[1/2] App Runner already paused." -ForegroundColor Green
 } else {
     Write-Host "[1/2] Pausing App Runner..." -ForegroundColor Yellow
     aws apprunner pause-service --service-arn $Services[0].ServiceArn | Out-Null
 
+    # Pausing is async - poll until AWS actually reports PAUSED before moving on.
     do {
         Start-Sleep -Seconds 10
         $Status = (aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api'].Status" --output text)
@@ -29,17 +37,20 @@ if ($Services.Count -eq 0) {
     Write-Host "      App Runner paused." -ForegroundColor Green
 }
 
-# ── Step 2: Stop RDS ─────────────────────────────────────────────────────────
+# Step 2: Stop RDS
 $RdsStatus = (aws rds describe-db-instances --db-instance-identifier $RdsId --query "DBInstances[0].DBInstanceStatus" --output text)
 
 if ($RdsStatus -eq "stopped") {
     Write-Host "[2/2] RDS already stopped." -ForegroundColor Green
 } elseif ($RdsStatus -eq "available") {
     Write-Host "[2/2] Stopping RDS..." -ForegroundColor Yellow
+    # Unlike App Runner, this doesn't poll for completion - it just kicks off
+    # the stop and returns immediately; RDS finishes stopping in the background.
     aws rds stop-db-instance --db-instance-identifier $RdsId | Out-Null
     Write-Host "      RDS is stopping (happens in the background)." -ForegroundColor Green
 } else {
-    Write-Host "[2/2] RDS is $RdsStatus — skipping stop." -ForegroundColor Yellow
+    # e.g. already "stopping" or "starting" - can't stop from those states.
+    Write-Host "[2/2] RDS is $RdsStatus - skipping stop." -ForegroundColor Yellow
 }
 
 Write-Host ""

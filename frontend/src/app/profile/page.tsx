@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 // WHAT THIS FILE IS:
 // The Profile page — what the user sees at http://localhost:3001/profile.
 // This is a protected page: if you're not logged in, you get redirected to /login.

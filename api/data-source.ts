@@ -1,3 +1,5 @@
+// Phase 1
+
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import * as path from 'path';

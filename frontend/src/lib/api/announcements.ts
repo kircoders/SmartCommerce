@@ -1,3 +1,5 @@
+// Phase 1
+
 const API_URL = 'https://3hfuwvhp27.us-east-1.awsapprunner.com/api';
 
 export async function getAnnouncement(): Promise<string> {

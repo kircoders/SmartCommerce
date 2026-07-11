@@ -1,3 +1,5 @@
+// Phase 1
+
 // WHAT THIS FILE IS:
 // The root page of the app — what loads when someone visits http://localhost:3001.
 // It has no UI at all. Its only job is to immediately redirect the user to /login.

@@ -1,3 +1,5 @@
+// Phase 1
+
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class CreateUsers1782777011365 implements MigrationInterface {

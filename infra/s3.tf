@@ -1,9 +1,15 @@
+# Phase 2
+
+# The bucket that stores product images for the catalog.
 resource "aws_s3_bucket" "product_images" {
   bucket = "smartcommerce-product-images-452698428461"
 
   tags = { Name = "smartcommerce-product-images" }
 }
 
+# S3 buckets block public access by default — this turns that default OFF
+# so the bucket policy below (which grants public read) is actually allowed
+# to take effect. Without this, the bucket policy would be silently ignored.
 resource "aws_s3_bucket_public_access_block" "product_images" {
   bucket = aws_s3_bucket.product_images.id
 
@@ -13,6 +19,10 @@ resource "aws_s3_bucket_public_access_block" "product_images" {
   restrict_public_buckets = false
 }
 
+# Lets anyone read (GET) objects in this bucket — product images need to be
+# publicly viewable on the storefront without requiring signed URLs.
+# Uploading/deleting is NOT public — that's locked to the App Runner role
+# via the policy at the bottom of this file.
 resource "aws_s3_bucket_policy" "product_images_public_read" {
   bucket     = aws_s3_bucket.product_images.id
   depends_on = [aws_s3_bucket_public_access_block.product_images]
@@ -29,6 +39,9 @@ resource "aws_s3_bucket_policy" "product_images_public_read" {
   })
 }
 
+# Allows the frontend (running in a browser, on a different origin) to
+# upload/fetch images directly against S3. Without CORS, the browser would
+# block those cross-origin requests even though the bucket policy allows them.
 resource "aws_s3_bucket_cors_configuration" "product_images" {
   bucket = aws_s3_bucket.product_images.id
 
@@ -41,6 +54,8 @@ resource "aws_s3_bucket_cors_configuration" "product_images" {
 }
 
 # Allow the App Runner instance role to upload/delete images
+# This is what lets the NestJS backend itself (not just anonymous public
+# reads) manage images — attached to the same runtime role defined in iam.tf.
 resource "aws_iam_role_policy" "apprunner_s3" {
   name = "smartcommerce-apprunner-s3-policy"
   role = aws_iam_role.apprunner_instance.id
