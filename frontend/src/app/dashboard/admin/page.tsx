@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 // WHAT THIS FILE IS:
 // The Admin Dashboard — what an ADMIN role user sees after logging in.
 // Placeholder for Phase 1. In later phases, this will show user management,
@@ -47,6 +50,9 @@ export default function AdminDashboard() {
           <Typography variant="body1" sx={{ mb: 4 }}>
             Welcome, {user.firstName}! You are logged in as {user.role}.
           </Typography>
+          <Button variant="outlined" onClick={() => router.push('/profile')} sx={{ mr: 2 }}>My Profile</Button>
+          <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
+          <Button variant="outlined" onClick={() => router.push('/dashboard/admin/products')} sx={{ mr: 2 }}>Manage Products</Button>
           <Button variant="outlined" onClick={handleLogout}>Logout</Button>
         </Box>
       </Box>

@@ -1,10 +1,16 @@
-# SmartCommerce — start the API
+﻿# Phase 1
+
+# SmartCommerce - start the API
 # First time: terraform apply (creates App Runner service, ~3 min)
 # After that:  starts RDS + resumes App Runner (~5 min total)
+# This is the reverse of down.ps1.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Rebuild PATH from Machine+User scope - needed because this is sometimes
+# launched from a background/scheduled context where PATH hasn't picked up
+# recently-installed tools (aws, terraform) yet.
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $RdsId = "database-1"
@@ -12,7 +18,9 @@ $RdsId = "database-1"
 Write-Host ""
 Write-Host "=== SmartCommerce: Starting ===" -ForegroundColor Cyan
 
-# ── Step 1: Start RDS if stopped ────────────────────────────────────────────
+# Step 1: Start RDS if stopped
+# RDS has to come up before App Runner, or the API will fail to connect on
+# its first requests.
 $RdsStatus = (aws rds describe-db-instances --db-instance-identifier $RdsId --query "DBInstances[0].DBInstanceStatus" --output text)
 Write-Host "[1/2] RDS status: $RdsStatus"
 
@@ -30,7 +38,8 @@ if ($RdsStatus -eq "stopped") {
 } elseif ($RdsStatus -eq "available") {
     Write-Host "      RDS already running." -ForegroundColor Green
 } else {
-    Write-Host "      RDS is $RdsStatus — waiting..." -ForegroundColor Yellow
+    # e.g. already mid-"starting" from a previous run - just wait it out.
+    Write-Host "      RDS is $RdsStatus - waiting..." -ForegroundColor Yellow
     do {
         Start-Sleep -Seconds 20
         $RdsStatus = (aws rds describe-db-instances --db-instance-identifier $RdsId --query "DBInstances[0].DBInstanceStatus" --output text)
@@ -38,12 +47,14 @@ if ($RdsStatus -eq "stopped") {
     } while ($RdsStatus -ne "available")
 }
 
-# ── Step 2: Resume App Runner ────────────────────────────────────────────────
+# Step 2: Resume App Runner
 $ServicesJson = aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api']" --output json
 $Services = if ($ServicesJson) { $ServicesJson | ConvertFrom-Json } else { @() }
 
 if ($Services.Count -eq 0) {
-    Write-Host "[2/2] First time setup — running terraform apply (~3 min)..." -ForegroundColor Yellow
+    # No service exists yet at all (e.g. brand new environment, or it was
+    # destroyed) - create everything from scratch via Terraform.
+    Write-Host "[2/2] First time setup - running terraform apply (~3 min)..." -ForegroundColor Yellow
     terraform apply -auto-approve
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     $AppRunnerUrl = terraform output -raw apprunner_url
@@ -65,11 +76,14 @@ if ($Services.Count -eq 0) {
     $AppRunnerUrl = "https://$($Services[0].ServiceUrl)"
 }
 
-# ── Update frontend API URL if needed ───────────────────────────────────────
+# Update frontend API URL if needed
+# The App Runner URL can change (e.g. after a from-scratch terraform apply),
+# so this rewrites the frontend's hardcoded API_URL constant to match
+# whatever URL is actually live right now, across all files that define one.
 $ApiBase = "$AppRunnerUrl/api"
 $FrontendApiDir = Join-Path $ProjectRoot "frontend\src\lib\api"
 $Updated = $false
-foreach ($File in @("auth.ts", "users.ts", "announcements.ts")) {
+foreach ($File in @("auth.ts", "users.ts", "announcements.ts", "products.ts")) {
     $Path = Join-Path $FrontendApiDir $File
     if (Test-Path $Path) {
         $Content = Get-Content $Path -Raw
@@ -88,6 +102,9 @@ Write-Host "API: $AppRunnerUrl" -ForegroundColor Cyan
 Write-Host ""
 
 if ($Updated) {
+    # Frontend is deployed separately via Amplify (triggered by a git push),
+    # so a URL change here needs to be committed and pushed to actually
+    # take effect on the live site.
     Write-Host "Frontend API URLs updated. Push to deploy:" -ForegroundColor Yellow
     Write-Host "  git add -A && git commit -m 'chore: update API URL' && git push"
     Write-Host ""

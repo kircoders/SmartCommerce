@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 // WHAT THIS FILE IS:
 // The Customer Dashboard — what a CUSTOMER role user sees after logging in.
 // This is a placeholder page for Phase 1. In a later phase, this will show
@@ -47,6 +50,7 @@ export default function CustomerDashboard() {
           Welcome, {user.firstName}! You are logged in as {user.role}.
         </Typography>
         <Button variant="outlined" onClick={() => router.push('/profile')} sx={{ mr: 2 }}>My Profile</Button>
+        <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
         <Button variant="outlined" onClick={handleLogout}>Logout</Button>
       </Box>
       </Box>

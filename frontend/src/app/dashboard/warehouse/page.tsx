@@ -1,5 +1,8 @@
 'use client';
 
+// Phase 1
+
+
 // WHAT THIS FILE IS:
 // The Warehouse Operator Dashboard — what a WAREHOUSE_OPERATOR role user sees after logging in.
 // Placeholder for Phase 1. In Phase 6 (Shipping & Warehouse Fulfillment), this will show
@@ -44,6 +47,7 @@ export default function WarehouseDashboard() {
           <Typography variant="body1" sx={{ mb: 4 }}>
             Welcome, {user.firstName}! You are logged in as {user.role}.
           </Typography>
+          <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
           <Button variant="outlined" onClick={handleLogout}>Logout</Button>
         </Box>
       </Box>
