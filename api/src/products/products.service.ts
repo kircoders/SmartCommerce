@@ -13,6 +13,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { ILike, Repository } from 'typeorm';
+import { InventoryService } from '../inventory/inventory.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductImageEntity } from './entities/product-image.entity';
@@ -20,6 +21,12 @@ import { ProductEntity } from './entities/product.entity';
 
 const BUCKET = 'smartcommerce-product-images-452698428461';
 const REGION = 'us-east-1';
+
+// The shape the public read methods actually return - a product plus a
+// derived inStock flag. Not a real database column; computed fresh on
+// every read from the inventory table via InventoryService, and never
+// exposes the raw quantity (customers only see available-or-not).
+export type ProductWithStock = ProductEntity & { inStock: boolean };
 
 // All the actual business logic for the products module lives here - both
 // controllers (products.controller.ts, admin-products.controller.ts) just
@@ -40,29 +47,32 @@ export class ProductsService {
     private readonly productRepo: Repository<ProductEntity>,
     @InjectRepository(ProductImageEntity)
     private readonly imageRepo: Repository<ProductImageEntity>,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   // All three read methods below share the same shape: filter to
   // isActive: true (the soft-delete flag - inactive products never show up
-  // here), and eager-load relations: { images: true } so each product comes
-  // back with its images already joined in, instead of a separate query per
-  // product.
+  // here), eager-load relations: { images: true } so each product comes
+  // back with its images already joined in, and attach inStock (Phase 3)
+  // via a separate batch lookup against the inventory table.
 
-  async findAll(): Promise<ProductEntity[]> {
-    return this.productRepo.find({
+  async findAll(): Promise<ProductWithStock[]> {
+    const products = await this.productRepo.find({
       where: { isActive: true },
       relations: { images: true },
       order: { name: 'ASC' },
     });
+    return this.attachStock(products);
   }
 
-  async findOne(id: string): Promise<ProductEntity> {
+  async findOne(id: string): Promise<ProductWithStock> {
     const product = await this.productRepo.findOne({
       where: { id, isActive: true },
       relations: { images: true },
     });
     if (!product) throw new NotFoundException('Product not found');
-    return product;
+    const [withStock] = await this.attachStock([product]);
+    return withStock;
   }
 
   // ILike = case-insensitive LIKE. An array passed to `where` means OR in
@@ -71,8 +81,8 @@ export class ProductsService {
   // fully use the idx_products_name index from the migration; fine at this
   // table's current size, would need a different index type (e.g. pg_trgm)
   // to stay fast at a much larger scale.
-  async search(q: string): Promise<ProductEntity[]> {
-    return this.productRepo.find({
+  async search(q: string): Promise<ProductWithStock[]> {
+    const products = await this.productRepo.find({
       where: [
         { name: ILike(`%${q}%`), isActive: true },
         { description: ILike(`%${q}%`), isActive: true },
@@ -80,6 +90,18 @@ export class ProductsService {
       relations: { images: true },
       order: { name: 'ASC' },
     });
+    return this.attachStock(products);
+  }
+
+  // Batch-fetches availability for a list of products in one query (via
+  // InventoryService.getAvailabilityMap) rather than one inventory lookup
+  // per product - avoids an N+1 query pattern when findAll() returns many
+  // products at once.
+  private async attachStock(products: ProductEntity[]): Promise<ProductWithStock[]> {
+    const availability = await this.inventoryService.getAvailabilityMap(
+      products.map((p) => p.id),
+    );
+    return products.map((p) => ({ ...p, inStock: availability[p.id] ?? false }));
   }
 
   // dto arrives here already validated by CreateProductDto's decorators
@@ -95,7 +117,11 @@ export class ProductsService {
       isActive: dto.isActive ?? true,
       createdBy: userId,
     });
-    return this.productRepo.save(product);
+    const saved = await this.productRepo.save(product);
+    // Every product needs exactly one inventory row (Phase 3) - created
+    // here so it's impossible to end up with a product that has none.
+    await this.inventoryService.createForProduct(saved.id);
+    return saved;
   }
 
   // Object.assign only overwrites properties that actually exist on dto -
@@ -111,12 +137,15 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
-  // Deleting a product has to clean up two different systems: S3 (files)
-  // and Postgres (rows). Postgres can't reach into S3 on its own, so every
-  // image's actual file gets deleted manually here, BEFORE the product row
-  // itself is removed. The image *rows* don't need manual deletion though -
-  // product_images.product_id has ON DELETE CASCADE (see the migration), so
-  // productRepo.remove() triggers Postgres to delete them automatically.
+  // Deleting a product has to clean up three things: S3 files, the
+  // inventory record, and the product row itself - in that order.
+  // Postgres can't reach into S3 on its own, so every image's actual file
+  // gets deleted manually here first. The image *rows* don't need manual
+  // deletion though - product_images.product_id has ON DELETE CASCADE (see
+  // the migration), so productRepo.remove() triggers Postgres to delete
+  // them automatically. inventory.product_id has NO cascade, though - it
+  // has to be deleted explicitly before the product row, or Postgres
+  // rejects the delete with a foreign key violation.
   async remove(id: string): Promise<void> {
     const product = await this.productRepo.findOne({
       where: { id },
@@ -127,6 +156,7 @@ export class ProductsService {
     for (const image of product.images) {
       await this.deleteFromS3(image.s3Key);
     }
+    await this.inventoryService.deleteForProduct(id);
     await this.productRepo.remove(product);
   }
 

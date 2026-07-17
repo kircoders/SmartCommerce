@@ -15,6 +15,10 @@
 // WHAT IT DOES:
 // - Shows the primary image if one exists, otherwise a plain placeholder box
 // - Shows name, formatted price, and a truncated description
+// - Phase 3: shows a "We'll restock soon!" chip instead of the price when
+//   product.inStock is false. Deliberately friendly wording, not a blunt
+//   "OUT OF STOCK" - and no warning at all for low-but-nonzero stock,
+//   since that's internal-only information (see the /inventory pages).
 // - Clicking the card (outside the admin buttons) calls onClick, if provided
 // - If onEdit/onDelete are passed, renders Edit/Delete buttons that stop the
 //   click from also triggering onClick (so clicking "Delete" doesn't also
@@ -28,6 +32,7 @@ import CardMedia from '@mui/material/CardMedia';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import { Product } from '@/types/product';
 
 interface ProductCardProps {
@@ -65,9 +70,13 @@ export default function ProductCard({ product, onClick, onEdit, onDelete }: Prod
       )}
       <CardContent>
         <Typography variant="subtitle1" noWrap>{product.name}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          ${Number(product.price).toFixed(2)}
-        </Typography>
+        {product.inStock ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            ${Number(product.price).toFixed(2)}
+          </Typography>
+        ) : (
+          <Chip label="We'll restock soon!" size="small" color="warning" sx={{ mb: 1 }} />
+        )}
         {product.description && (
           <Typography
             variant="body2"

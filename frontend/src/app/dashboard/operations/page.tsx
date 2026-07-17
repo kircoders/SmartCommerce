@@ -48,6 +48,7 @@ export default function OperationsDashboard() {
             Welcome, {user.firstName}! You are logged in as {user.role}.
           </Typography>
           <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
+          <Button variant="outlined" onClick={() => router.push('/inventory')} sx={{ mr: 2 }}>Inventory</Button>
           <Button variant="outlined" onClick={handleLogout}>Logout</Button>
         </Box>
       </Box>

@@ -28,6 +28,7 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import { Product } from '@/types/product';
 
 interface ProductDetailDialogProps {
@@ -70,9 +71,13 @@ export default function ProductDetailDialog({ product, onClose }: ProductDetailD
               </Box>
             )}
 
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              ${Number(product.price).toFixed(2)}
-            </Typography>
+            {product.inStock ? (
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                ${Number(product.price).toFixed(2)}
+              </Typography>
+            ) : (
+              <Chip label="We'll restock soon!" color="warning" sx={{ mb: 1 }} />
+            )}
 
             {product.description && (
               <Typography variant="body1" color="text.secondary">
@@ -82,7 +87,7 @@ export default function ProductDetailDialog({ product, onClose }: ProductDetailD
           </DialogContent>
           <DialogActions>
             <Button onClick={onClose}>Close</Button>
-            <Button variant="contained">Buy</Button>
+            <Button variant="contained" disabled={!product.inStock}>Buy</Button>
           </DialogActions>
         </>
       )}

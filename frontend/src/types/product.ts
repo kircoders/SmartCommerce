@@ -33,4 +33,9 @@ export interface Product {
   images: ProductImage[];
   createdAt: string;
   updatedAt: string;
+  // Phase 3: derived from inventory (available > 0), attached server-side
+  // by products.service.ts. Only present on the public read endpoints
+  // (GET /products, /products/search, /products/:id) - never a raw
+  // quantity, customers only ever see in-stock or not.
+  inStock: boolean;
 }

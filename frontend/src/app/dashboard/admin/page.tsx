@@ -53,6 +53,7 @@ export default function AdminDashboard() {
           <Button variant="outlined" onClick={() => router.push('/profile')} sx={{ mr: 2 }}>My Profile</Button>
           <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
           <Button variant="outlined" onClick={() => router.push('/dashboard/admin/products')} sx={{ mr: 2 }}>Manage Products</Button>
+          <Button variant="outlined" onClick={() => router.push('/inventory')} sx={{ mr: 2 }}>Inventory</Button>
           <Button variant="outlined" onClick={handleLogout}>Logout</Button>
         </Box>
       </Box>
