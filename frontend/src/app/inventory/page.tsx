@@ -114,9 +114,13 @@ export default function InventoryPage() {
                       {isOutOfStock ? (
                         <Chip label="OUT OF STOCK" color="error" size="small" />
                       ) : isLowStock ? (
-                        <Chip label={`${record.quantityAvailable} left`} color="warning" size="small" />
+                        <Chip
+                          label={`Get it now, only ${record.quantityAvailable} left!`}
+                          color="warning"
+                          size="small"
+                        />
                       ) : (
-                        <Chip label="OK" color="success" size="small" variant="outlined" />
+                        <Chip label="IN STOCK" color="success" size="small" variant="outlined" />
                       )}
                     </TableCell>
                     <TableCell>{new Date(record.updatedAt).toLocaleString()}</TableCell>

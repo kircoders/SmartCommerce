@@ -33,9 +33,13 @@ export interface Product {
   images: ProductImage[];
   createdAt: string;
   updatedAt: string;
-  // Phase 3: derived from inventory (available > 0), attached server-side
-  // by products.service.ts. Only present on the public read endpoints
-  // (GET /products, /products/search, /products/:id) - never a raw
-  // quantity, customers only ever see in-stock or not.
+  // Phase 3: stock info attached server-side by products.service.ts on
+  // the public read endpoints (GET /products, /products/search,
+  // /products/:id). quantityAvailable/lowStockThreshold are the real
+  // numbers (deliberately exposed here for "only N left!" messaging) -
+  // reserved quantity and adjustment history stay internal-only, on
+  // /inventory instead.
   inStock: boolean;
+  quantityAvailable: number;
+  lowStockThreshold: number;
 }

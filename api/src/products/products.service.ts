@@ -22,11 +22,17 @@ import { ProductEntity } from './entities/product.entity';
 const BUCKET = 'smartcommerce-product-images-452698428461';
 const REGION = 'us-east-1';
 
-// The shape the public read methods actually return - a product plus a
-// derived inStock flag. Not a real database column; computed fresh on
-// every read from the inventory table via InventoryService, and never
-// exposes the raw quantity (customers only see available-or-not).
-export type ProductWithStock = ProductEntity & { inStock: boolean };
+// The shape the public read methods actually return - a product plus
+// derived stock info. Not real database columns; computed fresh on every
+// read from the inventory table via InventoryService. quantityAvailable
+// and lowStockThreshold are deliberately exposed here (unlike reserved
+// quantity or adjustment history, which stay internal-only) so the
+// frontend can show "only N left!" urgency messaging on the catalog.
+export type ProductWithStock = ProductEntity & {
+  inStock: boolean;
+  quantityAvailable: number;
+  lowStockThreshold: number;
+};
 
 // All the actual business logic for the products module lives here - both
 // controllers (products.controller.ts, admin-products.controller.ts) just
@@ -93,15 +99,21 @@ export class ProductsService {
     return this.attachStock(products);
   }
 
-  // Batch-fetches availability for a list of products in one query (via
-  // InventoryService.getAvailabilityMap) rather than one inventory lookup
+  // Batch-fetches stock info for a list of products in one query (via
+  // InventoryService.getStockInfoMap) rather than one inventory lookup
   // per product - avoids an N+1 query pattern when findAll() returns many
   // products at once.
   private async attachStock(products: ProductEntity[]): Promise<ProductWithStock[]> {
-    const availability = await this.inventoryService.getAvailabilityMap(
-      products.map((p) => p.id),
-    );
-    return products.map((p) => ({ ...p, inStock: availability[p.id] ?? false }));
+    const stockInfo = await this.inventoryService.getStockInfoMap(products.map((p) => p.id));
+    return products.map((p) => {
+      const info = stockInfo[p.id] ?? { quantityAvailable: 0, lowStockThreshold: 0 };
+      return {
+        ...p,
+        inStock: info.quantityAvailable > 0,
+        quantityAvailable: info.quantityAvailable,
+        lowStockThreshold: info.lowStockThreshold,
+      };
+    });
   }
 
   // dto arrives here already validated by CreateProductDto's decorators

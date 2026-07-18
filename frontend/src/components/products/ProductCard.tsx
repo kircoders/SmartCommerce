@@ -15,10 +15,11 @@
 // WHAT IT DOES:
 // - Shows the primary image if one exists, otherwise a plain placeholder box
 // - Shows name, formatted price, and a truncated description
-// - Phase 3: shows a "We'll restock soon!" chip instead of the price when
-//   product.inStock is false. Deliberately friendly wording, not a blunt
-//   "OUT OF STOCK" - and no warning at all for low-but-nonzero stock,
-//   since that's internal-only information (see the /inventory pages).
+// - Phase 3: shows a stock chip alongside/instead of price -
+//   "We'll restock soon!" (friendly wording, not a blunt "OUT OF STOCK")
+//   when quantityAvailable is 0, "Get it now, only N left!" urgency
+//   messaging when low but not zero, "IN STOCK" otherwise. Same three
+//   states as the internal /inventory list, just worded for customers.
 // - Clicking the card (outside the admin buttons) calls onClick, if provided
 // - If onEdit/onDelete are passed, renders Edit/Delete buttons that stop the
 //   click from also triggering onClick (so clicking "Delete" doesn't also
@@ -45,6 +46,8 @@ interface ProductCardProps {
 export default function ProductCard({ product, onClick, onEdit, onDelete }: ProductCardProps) {
   const primaryImage = product.images.find((img) => img.isPrimary) ?? product.images[0];
   const isAdmin = Boolean(onEdit || onDelete);
+  const isOutOfStock = product.quantityAvailable === 0;
+  const isLowStock = !isOutOfStock && product.quantityAvailable <= product.lowStockThreshold;
 
   const content = (
     <>
@@ -70,12 +73,19 @@ export default function ProductCard({ product, onClick, onEdit, onDelete }: Prod
       )}
       <CardContent>
         <Typography variant="subtitle1" noWrap>{product.name}</Typography>
-        {product.inStock ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            ${Number(product.price).toFixed(2)}
-          </Typography>
-        ) : (
+        {isOutOfStock ? (
           <Chip label="We'll restock soon!" size="small" color="warning" sx={{ mb: 1 }} />
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2" color="text.secondary">
+              ${Number(product.price).toFixed(2)}
+            </Typography>
+            {isLowStock ? (
+              <Chip label={`Get it now, only ${product.quantityAvailable} left!`} size="small" color="warning" />
+            ) : (
+              <Chip label="IN STOCK" size="small" color="success" variant="outlined" />
+            )}
+          </Box>
         )}
         {product.description && (
           <Typography

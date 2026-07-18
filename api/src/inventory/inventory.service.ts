@@ -114,20 +114,26 @@ export class InventoryService {
   }
 
   // Called from ProductsService's public read methods (findAll/findOne/
-  // search) to attach a basic inStock flag to the catalog. Deliberately
-  // returns only a boolean per product, never the raw quantity - customers
-  // are only supposed to see "available or not," not actual stock counts
-  // (those stay behind the WAREHOUSE_OPERATOR/OPERATIONS_MANAGER/ADMIN-only
-  // inventory endpoints).
-  async getAvailabilityMap(productIds: string[]): Promise<Record<string, boolean>> {
+  // search) to attach stock info to the catalog. Returns the real
+  // quantityAvailable + lowStockThreshold per product - a deliberate
+  // choice to show customers "only 3 left!" urgency messaging, same as
+  // most ecommerce sites. (Reserved quantity and adjustment history stay
+  // behind the WAREHOUSE_OPERATOR/OPERATIONS_MANAGER/ADMIN-only inventory
+  // endpoints - only these two fields go public.)
+  async getStockInfoMap(
+    productIds: string[],
+  ): Promise<Record<string, { quantityAvailable: number; lowStockThreshold: number }>> {
     if (productIds.length === 0) return {};
     const rows = await this.inventoryRepo.find({
       where: { productId: In(productIds) },
-      select: { productId: true, quantityAvailable: true },
+      select: { productId: true, quantityAvailable: true, lowStockThreshold: true },
     });
-    const map: Record<string, boolean> = {};
+    const map: Record<string, { quantityAvailable: number; lowStockThreshold: number }> = {};
     for (const row of rows) {
-      map[row.productId] = row.quantityAvailable > 0;
+      map[row.productId] = {
+        quantityAvailable: row.quantityAvailable,
+        lowStockThreshold: row.lowStockThreshold,
+      };
     }
     return map;
   }

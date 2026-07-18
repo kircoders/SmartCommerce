@@ -37,6 +37,9 @@ interface ProductDetailDialogProps {
 }
 
 export default function ProductDetailDialog({ product, onClose }: ProductDetailDialogProps) {
+  const isOutOfStock = product ? product.quantityAvailable === 0 : false;
+  const isLowStock = product ? !isOutOfStock && product.quantityAvailable <= product.lowStockThreshold : false;
+
   return (
     <Dialog open={Boolean(product)} onClose={onClose} maxWidth="sm" fullWidth>
       {product && (
@@ -71,12 +74,19 @@ export default function ProductDetailDialog({ product, onClose }: ProductDetailD
               </Box>
             )}
 
-            {product.inStock ? (
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                ${Number(product.price).toFixed(2)}
-              </Typography>
-            ) : (
+            {isOutOfStock ? (
               <Chip label="We'll restock soon!" color="warning" sx={{ mb: 1 }} />
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                <Typography variant="h6">
+                  ${Number(product.price).toFixed(2)}
+                </Typography>
+                {isLowStock ? (
+                  <Chip label={`Get it now, only ${product.quantityAvailable} left!`} color="warning" />
+                ) : (
+                  <Chip label="IN STOCK" color="success" variant="outlined" />
+                )}
+              </Box>
             )}
 
             {product.description && (
