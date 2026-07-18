@@ -58,14 +58,6 @@ export class InventoryService {
     return this.inventoryRepo.save(inventory);
   }
 
-  // Called from ProductsService when a new product is created - every
-  // product needs exactly one inventory row (product_id is UNIQUE), so this
-  // happens automatically rather than requiring a separate manual step.
-  async createForProduct(productId: string): Promise<InventoryEntity> {
-    const inventory = this.inventoryRepo.create({ productId });
-    return this.inventoryRepo.save(inventory);
-  }
-
   // The audited path. Applies the change to the CURRENT totals in
   // `inventory` AND writes a permanent row to `inventory_adjustments` -
   // both have to happen together, or the audit log and the actual stock

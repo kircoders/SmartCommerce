@@ -129,11 +129,14 @@ export class ProductsService {
       isActive: dto.isActive ?? true,
       createdBy: userId,
     });
-    const saved = await this.productRepo.save(product);
-    // Every product needs exactly one inventory row (Phase 3) - created
-    // here so it's impossible to end up with a product that has none.
-    await this.inventoryService.createForProduct(saved.id);
-    return saved;
+    // Every product needs exactly one inventory row (Phase 3) - a
+    // database trigger (see migration InventoryAutoCreateTrigger) creates
+    // it automatically the instant this INSERT happens, so there's
+    // nothing to call here explicitly anymore. This is a stronger
+    // guarantee than application code calling InventoryService after the
+    // fact - it holds even for a product inserted outside this method
+    // entirely (raw SQL, a script, a future code path).
+    return this.productRepo.save(product);
   }
 
   // Object.assign only overwrites properties that actually exist on dto -
