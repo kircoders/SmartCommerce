@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AuthModule } from './auth/auth.module';
+import { CartModule } from './cart/cart.module';
 import configuration from './config/configuration';
 import { InventoryModule } from './inventory/inventory.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
@@ -38,6 +39,7 @@ import { UsersModule } from './users/users.module';
     AnnouncementsModule,
     ProductsModule,
     InventoryModule,
+    CartModule,
   ],
 })
 export class AppModule implements NestModule {

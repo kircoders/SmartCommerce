@@ -1,11 +1,12 @@
 'use client';
 
-// Phase 2
+// Phase 2 / Phase 4
 
 // WHAT THIS FILE IS:
 // The product detail popup - shown when a user clicks a product card on the
 // /products browse page. A MUI Dialog (modal), not a separate page/route,
-// per the design: click a card -> see full details -> "Buy" or "Close".
+// per the design: click a card -> see full details -> "Add to Cart" or
+// "Close".
 //
 // WHY A DIALOG INSTEAD OF A DETAIL PAGE:
 // Simpler, and the data's already in hand - ProductsService.findAll() on the
@@ -14,21 +15,32 @@
 // It just renders whichever product was clicked.
 //
 // WHAT IT SHOWS: all images (not just primary), name, price, full
-// description.
+// description, and a quantity selector (min 1) next to Add to Cart.
 //
 // BUTTONS:
-// - "Buy": intentionally a dead end for now - no checkout/cart flow exists
-//   yet, so it does nothing. Wiring it up is future-phase work.
+// - "Add to Cart": only shown to CUSTOMER role - every other role can
+//   browse /products (Phase 2), but only customers can actually have a
+//   cart (the backend's RolesGuard would 403 anyone else), so there's no
+//   point showing a button that would just fail for them. Calls
+//   POST /cart/items with the selected quantity; shows a success message
+//   on the dialog itself rather than closing it, so you can keep adjusting
+//   quantity and add more without reopening.
 // - "Close": closes the dialog, nothing else.
 
+import { useEffect, useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import Alert from '@mui/material/Alert';
+import { useAuth } from '@/hooks/useAuth';
+import { UserRole } from '@/types/user';
+import { addToCart } from '@/lib/api/cart';
 import { Product } from '@/types/product';
 
 interface ProductDetailDialogProps {
@@ -37,8 +49,44 @@ interface ProductDetailDialogProps {
 }
 
 export default function ProductDetailDialog({ product, onClose }: ProductDetailDialogProps) {
+  const { user, token } = useAuth();
+  const [quantity, setQuantity] = useState(1);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
   const isOutOfStock = product ? product.quantityAvailable === 0 : false;
   const isLowStock = product ? !isOutOfStock && product.quantityAvailable <= product.lowStockThreshold : false;
+  const isCustomer = user?.role === UserRole.CUSTOMER;
+
+  // Reset back to 1, and clear any leftover success/error message, every
+  // time a different product is opened.
+  useEffect(() => {
+    setQuantity(1);
+    setError('');
+    setSuccess(false);
+  }, [product?.id]);
+
+  function handleQuantityChange(value: string) {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return;
+    setQuantity(Math.max(1, Math.floor(parsed)));
+  }
+
+  async function handleAddToCart() {
+    if (!token || !product) return;
+    setError('');
+    setSuccess(false);
+    setAdding(true);
+    try {
+      await addToCart(token, product.id, quantity);
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add to cart');
+    } finally {
+      setAdding(false);
+    }
+  }
 
   return (
     <Dialog open={Boolean(product)} onClose={onClose} maxWidth="sm" fullWidth>
@@ -90,14 +138,32 @@ export default function ProductDetailDialog({ product, onClose }: ProductDetailD
             )}
 
             {product.description && (
-              <Typography variant="body1" color="text.secondary">
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                 {product.description}
               </Typography>
             )}
+
+            {success && <Alert severity="success" sx={{ mb: 1 }}>Added to cart!</Alert>}
+            {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
           </DialogContent>
           <DialogActions>
             <Button onClick={onClose}>Close</Button>
-            <Button variant="contained" disabled={!product.inStock}>Buy</Button>
+            {isCustomer && !isOutOfStock && (
+              <>
+                <TextField
+                  type="number"
+                  size="small"
+                  label="Qty"
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
+                  slotProps={{ htmlInput: { min: 1 } }}
+                  sx={{ width: 80 }}
+                />
+                <Button variant="contained" onClick={handleAddToCart} disabled={adding}>
+                  {adding ? 'Adding...' : 'Add to Cart'}
+                </Button>
+              </>
+            )}
           </DialogActions>
         </>
       )}

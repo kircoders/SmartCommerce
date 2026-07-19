@@ -6,6 +6,8 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import {
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -13,6 +15,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { ILike, Repository } from 'typeorm';
+import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -54,6 +57,12 @@ export class ProductsService {
     @InjectRepository(ProductImageEntity)
     private readonly imageRepo: Repository<ProductImageEntity>,
     private readonly inventoryService: InventoryService,
+    // forwardRef - CartService also depends back on ProductsService (to
+    // look up a product when adding to cart), so this is a genuine
+    // circular dependency between the two modules. See cart.service.ts's
+    // constructor for the matching forwardRef on the other side.
+    @Inject(forwardRef(() => CartService))
+    private readonly cartService: CartService,
   ) {}
 
   // All three read methods below share the same shape: filter to
@@ -152,15 +161,19 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
-  // Deleting a product has to clean up three things: S3 files, the
-  // inventory record, and the product row itself - in that order.
-  // Postgres can't reach into S3 on its own, so every image's actual file
-  // gets deleted manually here first. The image *rows* don't need manual
-  // deletion though - product_images.product_id has ON DELETE CASCADE (see
-  // the migration), so productRepo.remove() triggers Postgres to delete
-  // them automatically. inventory.product_id has NO cascade, though - it
-  // has to be deleted explicitly before the product row, or Postgres
-  // rejects the delete with a foreign key violation.
+  // Deleting a product has to clean up four things: S3 files, the
+  // inventory record, any cart_items referencing it, and the product row
+  // itself - in that order. Postgres can't reach into S3 on its own, so
+  // every image's actual file gets deleted manually here first. The image
+  // *rows* don't need manual deletion though - product_images.product_id
+  // has ON DELETE CASCADE (see the migration), so productRepo.remove()
+  // triggers Postgres to delete them automatically. inventory.product_id
+  // and cart_items.product_id have NO cascade, though - both have to be
+  // deleted explicitly before the product row, or Postgres rejects the
+  // delete with a foreign key violation. (This has nothing to do with
+  // customer cart access permissions - deleting a product from the catalog
+  // is a completely separate admin action from touching /cart directly;
+  // this just prevents the two features from corrupting each other's data.)
   async remove(id: string): Promise<void> {
     const product = await this.productRepo.findOne({
       where: { id },
@@ -172,6 +185,7 @@ export class ProductsService {
       await this.deleteFromS3(image.s3Key);
     }
     await this.inventoryService.deleteForProduct(id);
+    await this.cartService.removeProductFromCarts(id);
     await this.productRepo.remove(product);
   }
 
