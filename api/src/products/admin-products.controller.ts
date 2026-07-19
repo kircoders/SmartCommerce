@@ -13,6 +13,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -34,6 +35,8 @@ import { ProductsService } from './products.service';
 //   2. RolesGuard + @Roles(UserRole.ADMIN) - and that user's role must be
 //      ADMIN specifically. Non-admins get rejected here, never reaching
 //      the database.
+@ApiTags('admin-products')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @Controller('admin/products')
@@ -50,6 +53,7 @@ export class AdminProductsController {
   // @CurrentUser() pulls the logged-in user off the request (attached by
   // JwtAuthGuard) so we know who to credit as the creator.
   @Post()
+  @ApiOperation({ summary: 'Create a new product (admin only)' })
   async create(
     @Body() dto: CreateProductDto,
     @CurrentUser() user: { id: string },
@@ -62,6 +66,7 @@ export class AdminProductsController {
   // Partial update - UpdateProductDto makes every field optional, so you
   // only need to send the fields you're changing.
   @Put(':id')
+  @ApiOperation({ summary: 'Update a product (admin only, partial update)' })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateProductDto,
@@ -74,6 +79,7 @@ export class AdminProductsController {
   // Deletes the product AND all of its S3 images (handled inside the
   // service, not here) - this route just triggers it.
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a product, its images, inventory, and any cart items referencing it (admin only)' })
   async remove(@Param('id') id: string): Promise<{ data: null; message: string }> {
     await this.productsService.remove(id);
     return { data: null, message: 'Product deleted' };
@@ -87,6 +93,7 @@ export class AdminProductsController {
   // query param arrives as a string ("true"/"false"), hence the explicit
   // comparison rather than treating it as a boolean directly.
   @Post(':id/images')
+  @ApiOperation({ summary: 'Upload a product image (admin only, multipart/form-data)' })
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(
     @Param('id') id: string,
@@ -101,6 +108,7 @@ export class AdminProductsController {
   // Deletes one specific image off a product (both the S3 object and its
   // DB row - handled in the service).
   @Delete(':id/images/:imageId')
+  @ApiOperation({ summary: 'Delete a product image (admin only)' })
   async deleteImage(
     @Param('id') id: string,
     @Param('imageId') imageId: string,

@@ -3,6 +3,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { Request, Response } from 'express';
@@ -52,6 +53,19 @@ async function bootstrap() {
   httpAdapter.get('/api/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', container: process.env.HOSTNAME ?? 'unknown' });
   });
+
+  // Interactive API docs at /api/docs. addBearerAuth() adds an "Authorize"
+  // button in the UI - paste a JWT there once and it gets attached to
+  // every "Try it out" request automatically, same as setting the
+  // Authorization header manually in Postman.
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('SmartCommerce API')
+    .setDescription('SmartCommerce backend API - all routes are prefixed with /api')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, swaggerDocument);
 
   const config = app.get(ConfigService);
   const port = config.get<number>('port') ?? 3000;
