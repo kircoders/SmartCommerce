@@ -1,7 +1,8 @@
 // Phase 4
 
-import { IsInt, IsUUID, Min } from 'class-validator';
+import { IsInt, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 
 // Shape + validation rules for the body of POST /api/cart/items.
 // No cartId here on purpose - which cart this goes into is resolved
@@ -9,14 +10,17 @@ import { Type } from 'class-transformer';
 // one yet), never something the client names directly. Same reasoning as
 // createdBy on CreateProductDto never coming from the request body.
 export class AddToCartDto {
+  @ApiProperty({ description: 'Which product to add' })
   @IsUUID()
   productId!: string;
 
-  // Min(1), not Min(0) like inventory's DTOs - a cart item quantity of 0
-  // doesn't mean anything; removing the item is a separate endpoint
-  // (DELETE /api/cart/items/:id).
+  // The "must be at least 1" rule is deliberately NOT a Min(1) decorator
+  // here - that would auto-generate a message with no product name in it
+  // ("quantity must not be less than 1"), useless when a cart has several
+  // items. CartService.addItem() checks this itself instead, once the
+  // product is already loaded, so the message can actually say which one.
+  @ApiProperty({ description: 'How many to add (merges with existing quantity if already in cart)', minimum: 1 })
   @IsInt()
-  @Min(1)
   @Type(() => Number)
   quantity!: number;
 }

@@ -2,6 +2,7 @@
 
 import { IsEnum, IsInt, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AdjustmentType } from '../entities/inventory-adjustment.entity';
 
 // Shape + validation rules for the body of POST /api/inventory/adjustments.
@@ -11,19 +12,23 @@ import { AdjustmentType } from '../entities/inventory-adjustment.entity';
 // @CurrentUser() server-side, never from client input, so a user can't
 // attribute a change to someone else.
 export class CreateAdjustmentDto {
+  @ApiProperty({ description: 'Which product this adjustment applies to' })
   @IsUUID()
   productId!: string;
 
+  @ApiProperty({ description: 'Type of adjustment', enum: AdjustmentType })
   @IsEnum(AdjustmentType)
   adjustmentType!: AdjustmentType;
 
   // Signed - positive for an increase, negative for a decrease/correction
   // downward. Not restricted to >= 0 like UpdateInventoryDto's fields,
   // because this represents a CHANGE, not a resulting total.
+  @ApiProperty({ description: 'Signed change in quantity - positive to increase, negative to decrease' })
   @IsInt()
   @Type(() => Number)
   quantityChange!: number;
 
+  @ApiPropertyOptional({ description: 'Why this adjustment was made' })
   @IsString()
   @IsOptional()
   reason?: string;

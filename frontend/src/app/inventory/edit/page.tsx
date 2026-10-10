@@ -68,7 +68,7 @@ export default function InventoryEditPage() {
 function InventoryEditForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const productId = searchParams.get('id') ?? '';
+  const productId = searchParams?.get('id') ?? '';
   const { user, token, loading: authLoading } = useAuth();
 
   const [inventory, setInventory] = useState<Inventory | null>(null);

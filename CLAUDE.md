@@ -9,7 +9,7 @@ SmartCommerce is a multi-role ecommerce operations platform.
 **Frontend:** Next.js + TypeScript + React + Material UI
 **Database:** PostgreSQL (Amazon RDS)
 **Auth:** JWT
-**Cloud:** AWS (RDS, Secrets Manager, ECR, ECS Fargate, CloudWatch)
+**Cloud:** AWS (RDS, Secrets Manager, ECR, App Runner, Amplify, CloudWatch)
 
 Always read `docs/standards.md` before writing any code in this project.
 

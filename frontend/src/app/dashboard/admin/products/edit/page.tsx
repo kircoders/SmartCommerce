@@ -65,7 +65,7 @@ export default function EditProductPage() {
 function EditProductForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const productId = searchParams.get('id') ?? '';
+  const productId = searchParams?.get('id') ?? '';
   const { user, token, loading: authLoading } = useAuth();
 
   const [product, setProduct] = useState<Product | null>(null);

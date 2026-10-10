@@ -35,7 +35,9 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
 import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/user';
 import { getCart, updateCartItem, removeCartItem, clearCart } from '@/lib/api/cart';
@@ -55,6 +57,8 @@ export default function CartPage() {
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [clearing, setClearing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   function refreshCart(currentToken: string) {
     return getCart(currentToken).then(setCart);
@@ -89,6 +93,7 @@ export default function CartPage() {
 
   async function handleRemove(itemId: string) {
     if (!token) return;
+    if (!confirm('Remove this item from your cart?')) return;
     setError('');
     try {
       const updated = await removeCartItem(token, itemId);
@@ -98,19 +103,49 @@ export default function CartPage() {
     }
   }
 
+  // Manual refresh - reuses the same refreshCart() the initial page load
+  // already calls, just triggered by a button instead of on mount. Useful
+  // if stock changed elsewhere (another tab, another device) and the user
+  // wants to see current numbers without a full page reload.
+  async function handleRefresh() {
+    if (!token) return;
+    setError('');
+    setRefreshing(true);
+    try {
+      await refreshCart(token);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh cart');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   async function handleClear() {
     if (!token) return;
     if (!confirm('Clear your entire cart?')) return;
     setError('');
+    setClearing(true);
     try {
       const updated = await clearCart(token);
       setCart(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear cart');
+    } finally {
+      setClearing(false);
     }
   }
 
-  if (!user || user.role !== UserRole.CUSTOMER || !cart) return null;
+  // Previously this just returned null while loading - a blank page with
+  // no indication anything was happening. Now shows a spinner instead, so
+  // the user knows the cart is actually being fetched, not just broken.
+  if (!user || user.role !== UserRole.CUSTOMER) return null;
+  if (!cart) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   const grandTotal = cart.items.reduce(
     (sum, item) => sum + Number(item.unitPrice) * item.quantity,
@@ -121,9 +156,19 @@ export default function CartPage() {
     <Box sx={{ p: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">My Cart</Typography>
-        <Button variant="outlined" onClick={() => router.push('/products')}>
-          Back to Products
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+          >
+            Refresh
+          </Button>
+          <Button variant="outlined" onClick={() => router.push('/products')}>
+            Back to Products
+          </Button>
+        </Box>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -209,7 +254,13 @@ export default function CartPage() {
           </TableContainer>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Button variant="outlined" color="error" onClick={handleClear}>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleClear}
+              disabled={clearing}
+              startIcon={clearing ? <CircularProgress size={16} color="inherit" /> : undefined}
+            >
               Clear Cart
             </Button>
             <Button variant="contained" onClick={() => router.push('/checkout')}>

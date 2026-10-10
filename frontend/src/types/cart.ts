@@ -39,16 +39,15 @@ export interface CartItem {
   updatedAt: string;
 }
 
-export enum CartStatus {
-  ACTIVE = 'ACTIVE',
-  CHECKED_OUT = 'CHECKED_OUT',
-  ABANDONED = 'ABANDONED',
-}
-
+// Status is now a real lookup table on the backend (cart_statuses) rather
+// than a plain string column - the API returns statusId (a number: 1 =
+// ACTIVE, 2 = CHECKED_OUT, 3 = ABANDONED), not a status string. Carts are
+// also temporary now - deleted the moment an order is placed - so
+// CHECKED_OUT/ABANDONED carts are rarely seen in practice at all.
 export interface Cart {
   id: string;
   customerId: string;
-  status: CartStatus;
+  statusId: number;
   items: CartItem[];
   createdAt: string;
   updatedAt: string;

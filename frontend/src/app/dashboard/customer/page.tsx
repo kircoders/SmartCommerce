@@ -52,6 +52,7 @@ export default function CustomerDashboard() {
         <Button variant="outlined" onClick={() => router.push('/profile')} sx={{ mr: 2 }}>My Profile</Button>
         <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
         <Button variant="outlined" onClick={() => router.push('/cart')} sx={{ mr: 2 }}>My Cart</Button>
+        <Button variant="outlined" onClick={() => router.push('/orders')} sx={{ mr: 2 }}>My Orders</Button>
         <Button variant="outlined" onClick={handleLogout}>Logout</Button>
       </Box>
       </Box>

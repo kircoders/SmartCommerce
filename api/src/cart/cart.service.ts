@@ -8,7 +8,7 @@ import { ProductsService } from '../products/products.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartItemEntity } from './entities/cart-item.entity';
-import { CartEntity, CartStatus } from './entities/cart.entity';
+import { CART_STATUS_IDS, CartEntity, CartStatus } from './entities/cart.entity';
 
 export interface CheckoutValidationIssue {
   productId: string;
@@ -46,15 +46,17 @@ export class CartService {
   // concurrent requests - the database would reject it.
   async getOrCreateActiveCart(customerId: string): Promise<CartEntity> {
     const existing = await this.cartRepo.findOne({
-      where: { customerId, status: CartStatus.ACTIVE },
+      where: { customerId, statusId: CART_STATUS_IDS[CartStatus.ACTIVE] },
       relations: { items: { product: { images: true } } },
     });
-    if (existing) return existing;
-
-    const cart = this.cartRepo.create({ customerId, status: CartStatus.ACTIVE });
-    const saved = await this.cartRepo.save(cart);
-    saved.items = [];
-    return saved;
+    if (existing) {
+      return existing;
+    } else {
+      const cart = this.cartRepo.create({ customerId, statusId: CART_STATUS_IDS[CartStatus.ACTIVE] });
+      const saved = await this.cartRepo.save(cart);
+      saved.items = [];
+      return saved;
+    }
   }
 
   // Ownership check shared by update/remove - a cart item has no
@@ -67,7 +69,10 @@ export class CartService {
   private async findOwnedItem(customerId: string, itemId: string): Promise<CartItemEntity> {
     const item = await this.itemRepo.findOne({
       where: { id: itemId },
-      relations: { cart: true },
+      // product loaded too - not needed by removeItem() (the other
+      // caller), but updateItem() needs it to name the product in its
+      // "quantity must be at least 1" message.
+      relations: { cart: true, product: true },
     });
     if (!item || item.cart.customerId !== customerId) {
       throw new NotFoundException('Cart item not found');
@@ -103,6 +108,10 @@ export class CartService {
     // isn't active - same check every public product read already uses.
     const product = await this.productsService.findOne(dto.productId);
 
+    if (dto.quantity < 1) {
+      throw new BadRequestException(`Quantity for "${product.name}" must be at least 1`);
+    }
+
     const existing = await this.itemRepo.findOne({
       where: { cartId: cart.id, productId: dto.productId },
     });
@@ -128,12 +137,13 @@ export class CartService {
     return this.getOrCreateActiveCart(customerId);
   }
 
-  async updateItem(
-    customerId: string,
-    itemId: string,
-    dto: UpdateCartItemDto,
-  ): Promise<CartEntity> {
+  async updateItem(customerId: string, itemId: string, dto: UpdateCartItemDto): Promise<CartEntity> {
     const item = await this.findOwnedItem(customerId, itemId);
+
+    if (dto.quantity < 3) {
+      throw new BadRequestException(`Quantity for "${item.product.name}" must be at least 3`);
+    }
+
     await this.assertAvailable(item.productId, dto.quantity);
 
     item.quantity = dto.quantity;

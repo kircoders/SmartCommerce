@@ -15,10 +15,11 @@
 // 3. If validation finds problems (something in the cart now exceeds
 //    current stock), shows exactly which product and why, instead of a
 //    generic error.
-// 4. "Confirm Order" is intentionally a dead end - there's no order
-//    creation yet (that's Phase 5). It's disabled if validation failed,
-//    so at least you can't "confirm" something already known to be
-//    unavailable.
+// 4. "Confirm Order" calls POST /api/orders (placeOrder) - the backend
+//    handles everything atomically (create order + order_items, delete
+//    the now-temporary cart, deduct inventory). This page's only job is
+//    triggering it and redirecting to /order-confirmation on success.
+//    Still disabled if validation failed, same as before.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -33,9 +34,11 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/user';
 import { getCheckout, validateCheckout } from '@/lib/api/checkout';
+import { placeOrder } from '@/lib/api/orders';
 import { Cart, CheckoutValidation } from '@/types/cart';
 
 const DASHBOARD_ROUTES: Record<string, string> = {
@@ -52,6 +55,7 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<Cart | null>(null);
   const [validation, setValidation] = useState<CheckoutValidation | null>(null);
   const [error, setError] = useState('');
+  const [placing, setPlacing] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -69,6 +73,19 @@ export default function CheckoutPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load checkout'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user, authLoading, router]);
+
+  async function handleConfirmOrder() {
+    if (!token) return;
+    setError('');
+    setPlacing(true);
+    try {
+      const order = await placeOrder(token);
+      router.push(`/order-confirmation?orderId=${order.id}&total=${order.totalAmount}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to place order');
+      setPlacing(false);
+    }
+  }
 
   if (!user || user.role !== UserRole.CUSTOMER || !cart) return null;
 
@@ -164,14 +181,13 @@ export default function CheckoutPage() {
             <Button
               variant="contained"
               size="large"
-              disabled={Boolean(validation && !validation.valid)}
+              disabled={Boolean(validation && !validation.valid) || placing}
+              onClick={handleConfirmOrder}
+              startIcon={placing ? <CircularProgress size={16} color="inherit" /> : undefined}
             >
               Confirm Order
             </Button>
           </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 1 }}>
-            Order placement isn&apos;t available yet - this is a preview only.
-          </Typography>
         </>
       )}
     </Box>

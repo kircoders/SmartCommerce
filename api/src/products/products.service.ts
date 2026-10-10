@@ -6,6 +6,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import {
+  BadRequestException,
   forwardRef,
   Inject,
   Injectable,
@@ -81,10 +82,22 @@ export class ProductsService {
   }
 
   async findOne(id: string): Promise<ProductWithStock> {
-    const product = await this.productRepo.findOne({
-      where: { id, isActive: true },
-      relations: { images: true },
-    });
+    // id comes straight from the URL param - if it's not a valid UUID at
+    // all (e.g. someone hits /api/products/abc), Postgres itself throws
+    // (invalid input syntax for type uuid) rather than TypeORM just
+    // returning null. Without this try/catch that raw Postgres error would
+    // leak straight through as an unhandled 500 - catching it here turns a
+    // malformed id into the same kind of clean 400 response as any other
+    // bad input.
+    let product: ProductEntity | null;
+    try {
+      product = await this.productRepo.findOne({
+        where: { id, isActive: true },
+        relations: { images: true },
+      });
+    } catch (err) {
+      throw new BadRequestException('NOT A REAL UUID');
+    }
     if (!product) throw new NotFoundException('Product not found');
     const [withStock] = await this.attachStock([product]);
     return withStock;

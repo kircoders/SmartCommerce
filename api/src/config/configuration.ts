@@ -13,4 +13,11 @@ export default () => ({
     secret: process.env['JWT_SECRET'],
     expiresIn: process.env['JWT_EXPIRES_IN'] ?? '1h',
   },
+  logging: {
+    // Local dev log files - JSON lines, rotated by size. Not used for
+    // anything in production (App Runner logs go to CloudWatch instead).
+    dir: process.env['LOG_DIR'] ?? 'logs',
+    maxSizeKB: parseInt(process.env['LOG_MAX_SIZE_KB'] ?? '200', 10),
+    level: process.env['LOG_LEVEL'] ?? 'debug',
+  },
 });

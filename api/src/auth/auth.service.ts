@@ -3,6 +3,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -24,6 +25,8 @@ const ROLE_REDIRECT: Record<UserRole, string> = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -42,12 +45,19 @@ export class AuthService {
       lastName: dto.lastName,
       role: UserRole.CUSTOMER,
       isActive: true,
+      // TEMPORARY LEARNING EXAMPLE - commented out, not active.
+      // gender: dto.gender,
     });
 
     return { data: sanitize(user), message: 'Registration successful' };
   }
 
   async login(dto: LoginDto) {
+    // debug level: too noisy/verbose to want on every request in
+    // production, but genuinely useful when actively troubleshooting
+    // login issues locally.
+    this.logger.debug(`Login attempt for ${dto.email}`);
+
     const user = await this.usersService.findByEmail(dto.email);
 
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {

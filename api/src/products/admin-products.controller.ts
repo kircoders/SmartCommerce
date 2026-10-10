@@ -57,9 +57,12 @@ export class AdminProductsController {
   async create(
     @Body() dto: CreateProductDto,
     @CurrentUser() user: { id: string },
-  ): Promise<{ data: ProductEntity }> {
+  ): Promise<{ data: ProductEntity & { url: string } }> {
     const data = await this.productsService.create(dto, user.id);
-    return { data };
+    // Not a stored column - just derived from the product's own id, so
+    // whoever created it has a direct link to fetch it back (GET
+    // /api/products/:id) without having to build the URL themselves.
+    return { data: { ...data, url: `/api/products/${data.id}` } };
   }
 
   // PUT /admin/products/:id

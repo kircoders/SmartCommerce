@@ -16,7 +16,7 @@
 //    product's full details - "Buy" (dead end for now) / "Close".
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -29,6 +29,11 @@ import ProductCard from '@/components/products/ProductCard';
 import ProductDetailDialog from '@/components/products/ProductDetailDialog';
 
 export default function ProductsPage() {
+  // TEMP DEMO - manually triggers the 404 for this route segment, to show
+  // products/not-found.tsx (not the generic app/not-found.tsx). Remove/
+  // comment out after testing.
+  //notFound();
+
   const router = useRouter();
   const { user, token, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);

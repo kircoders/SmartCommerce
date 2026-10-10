@@ -18,6 +18,8 @@ export class UsersController {
   @Get('me')
   @ApiOperation({ summary: "Get the current user's own profile" })
   async getProfile(@CurrentUser() user: UserEntity) {
+    // TEMPORARY LEARNING EXAMPLE - commented out, not active.
+    // return { data: sanitize(user), note: 'this was successful!' };
     return { data: sanitize(user) };
   }
 

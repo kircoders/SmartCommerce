@@ -16,6 +16,7 @@
 // - login(): sends POST /api/auth/login, returns the JWT token + user + redirectTo
 // - logout(): sends POST /api/auth/logout to end the session on the backend
 
+import axios from 'axios';
 import { User } from '@/types/user';
 import { API_URL } from './config';
 
@@ -49,21 +50,45 @@ export async function register(data: RegisterData): Promise<User> {
   return json.data;
 }
 
+// Uses Axios instead of fetch() - the difference that actually matters
+// here: Axios automatically throws for any non-2xx response (a fetch()
+// with a 401 just comes back as a normal, non-throwing response you have
+// to check res.ok on yourself). That's why the error handling below is a
+// single catch block instead of the separate "if (!res.ok)" check the
+// other functions in this file still use.
 export async function login(data: LoginData): Promise<LoginResponse> {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
+  try {
+    const response = await axios.post<{ data: LoginResponse }>(`${API_URL}/auth/login`, data);
+    return response.data.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      // err.response only exists if the server actually responded (with
+      // an error status) - if it's missing entirely, the request never
+      // reached the backend at all (same case fetch() handled via its
+      // own try/catch before).
+      console.log('Login request failed with status:', err.response?.status);
 
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message ?? 'Login failed');
-  return json.data;
+      if (!err.response) {
+        throw new Error('Cannot reach the server - is the backend running?');
+      }
+      const body = err.response.data as { message?: string } | undefined;
+      throw new Error(body?.message ?? 'Login failed');
+    }
+    throw err;
+  }
 }
 
 export async function logout(token: string): Promise<void> {
-  await fetch(`${API_URL}/auth/logout`, {
+  // Doesn't throw on failure on purpose - whoever calls this clears the
+  // local token/redirects regardless (see useAuth().clearAuth()), since a
+  // broken server-side logout shouldn't trap someone in a logged-in state
+  // they're trying to leave. Still worth knowing if it failed though, so
+  // it's not completely silent.
+  const res = await fetch(`${API_URL}/auth/logout`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (!res.ok) {
+    console.error(`Server-side logout failed with status ${res.status}`);
+  }
 }

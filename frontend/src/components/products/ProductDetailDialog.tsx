@@ -38,6 +38,7 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/user';
 import { addToCart } from '@/lib/api/cart';
@@ -159,7 +160,12 @@ export default function ProductDetailDialog({ product, onClose }: ProductDetailD
                   slotProps={{ htmlInput: { min: 1 } }}
                   sx={{ width: 80 }}
                 />
-                <Button variant="contained" onClick={handleAddToCart} disabled={adding}>
+                <Button
+                  variant="contained"
+                  onClick={handleAddToCart}
+                  disabled={adding}
+                  startIcon={adding ? <CircularProgress size={16} color="inherit" /> : undefined}
+                >
                   {adding ? 'Adding...' : 'Add to Cart'}
                 </Button>
               </>

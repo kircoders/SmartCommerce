@@ -39,6 +39,10 @@ export class UserEntity {
   @Column({ name: 'is_active', default: true })
   isActive!: boolean;
 
+  // TEMPORARY LEARNING EXAMPLE - commented out, not active.
+  // @Column({ name: 'gender', length: 50, nullable: true })
+  // gender?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

@@ -15,17 +15,19 @@ powershell -NoProfile -Command "$s = aws rds describe-db-instances --db-instance
 
 echo.
 echo Starting backend (NestJS) - will run at http://localhost:3000
-start "SmartCommerce API" cmd /k "cd /d "%ROOT%api" && npm run start:dev"
+echo Output also gets saved to api\logs\ as JSON (rotated by size), so you
+echo can look back at it even after this window scrolls past or closes.
+wt -w -1 new-tab --title "SmartCommerce API" powershell -NoExit -File "%ROOT%run-backend.ps1"
 
 echo Waiting for backend to actually be listening on port 3000 before
-echo starting the frontend - both point at port 3000 by default, and
-echo whichever one starts first claims it. Starting them at the same time
-echo risks the frontend grabbing 3000 instead of the backend.
+echo starting the frontend - the frontend's API calls will just fail with
+echo connection errors until the backend is actually up and ready.
 powershell -NoProfile -Command "$ready = $false; for ($i = 0; $i -lt 60; $i++) { try { Invoke-WebRequest -Uri 'http://localhost:3000/api/health' -UseBasicParsing -TimeoutSec 2 | Out-Null; $ready = $true; break } catch { Start-Sleep -Seconds 2 } }; if ($ready) { Write-Host 'Backend is up.' -ForegroundColor Green } else { Write-Host 'Backend did not come up after 2 minutes - check its window for errors.' -ForegroundColor Red }"
 
 echo.
 echo Starting frontend (Next.js) - will run at http://localhost:3001
-start "SmartCommerce Frontend" cmd /k "cd /d "%ROOT%frontend" && npm run dev"
+echo Output also gets saved to frontend\logs\ as JSON (rotated by size).
+wt -w -1 new-tab --title "SmartCommerce Frontend" powershell -NoExit -File "%ROOT%run-frontend.ps1"
 
 echo.
 echo Both servers are launching in their own windows.

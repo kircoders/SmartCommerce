@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
+    "dev:logged": "node scripts/dev-logger.js",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "logs:filter": "node scripts/filter-logs.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -14,9 +16,12 @@
     "@mui/icons-material": "^9.1.1",
     "@mui/material": "^9.1.2",
     "@mui/material-nextjs": "^9.1.1",
+    "axios": "^1.18.1",
     "next": "16.2.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",

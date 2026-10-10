@@ -9,7 +9,9 @@ import { CartModule } from './cart/cart.module';
 import configuration from './config/configuration';
 import { InventoryModule } from './inventory/inventory.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { OrdersModule } from './orders/orders.module';
 import { ProductsModule } from './products/products.module';
+import { ShipmentsModule } from './shipments/shipments.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -40,6 +42,8 @@ import { UsersModule } from './users/users.module';
     ProductsModule,
     InventoryModule,
     CartModule,
+    OrdersModule,
+    ShipmentsModule,
   ],
 })
 export class AppModule implements NestModule {
