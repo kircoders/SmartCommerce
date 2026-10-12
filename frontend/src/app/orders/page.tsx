@@ -192,6 +192,16 @@ export default function OrdersPage() {
                                 ))}
                               </TableBody>
                             </Table>
+                            {/* Phase 7 - opens Contact Support with this order pre-selected. */}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => router.push(`/support/new?orderId=${order.id}`)}
+                              >
+                                Get help with this order
+                              </Button>
+                            </Box>
                           </Box>
                         </Collapse>
                       </TableCell>

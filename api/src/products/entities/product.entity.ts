@@ -57,9 +57,9 @@ export class ProductEntity {
   @OneToMany(() => ProductImageEntity, (image) => image.product, { cascade: true })
   images!: ProductImageEntity[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

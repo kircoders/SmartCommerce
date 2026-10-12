@@ -41,15 +41,15 @@ export class ShipmentEntity {
   @Column({ name: 'tracking_number', type: 'varchar', length: 100, nullable: true })
   trackingNumber!: string | null;
 
-  @Column({ name: 'shipped_date', type: 'timestamp', nullable: true })
+  @Column({ name: 'shipped_date', type: 'timestamptz', nullable: true })
   shippedDate!: Date | null;
 
-  @Column({ name: 'delivered_date', type: 'timestamp', nullable: true })
+  @Column({ name: 'delivered_date', type: 'timestamptz', nullable: true })
   deliveredDate!: Date | null;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

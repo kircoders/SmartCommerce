@@ -27,6 +27,25 @@ export class UsersService {
     return this.userRepository.findOne({ where: { email } });
   }
 
+  // The one place passwordHash is loaded (it's select: false on the
+  // entity) - for comparing against a login attempt only.
+  async findByEmailWithPassword(email: string): Promise<UserEntity | null> {
+    return this.userRepository.findOne({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async create(data: Partial<UserEntity>): Promise<UserEntity> {
     const user = this.userRepository.create(data);
     return this.userRepository.save(user);

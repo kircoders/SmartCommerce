@@ -12,6 +12,7 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { OrdersModule } from './orders/orders.module';
 import { ProductsModule } from './products/products.module';
 import { ShipmentsModule } from './shipments/shipments.module';
+import { SupportModule } from './support/support.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -44,6 +45,7 @@ import { UsersModule } from './users/users.module';
     CartModule,
     OrdersModule,
     ShipmentsModule,
+    SupportModule,
   ],
 })
 export class AppModule implements NestModule {

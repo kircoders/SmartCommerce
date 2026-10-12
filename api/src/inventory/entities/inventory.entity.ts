@@ -38,6 +38,6 @@ export class InventoryEntity {
   @Column({ name: 'low_stock_threshold', type: 'integer', default: 0 })
   lowStockThreshold!: number;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

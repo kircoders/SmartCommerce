@@ -24,7 +24,11 @@ export class UserEntity {
   @Column({ unique: true, length: 255 })
   email!: string;
 
-  @Column({ name: 'password_hash', length: 255 })
+  // select: false - never loaded by default, so it can't leak into any API
+  // response that includes a user (e.g. a support ticket's customer or
+  // agent). Only UsersService.findByEmailWithPassword() asks for it, for
+  // the login check.
+  @Column({ name: 'password_hash', length: 255, select: false })
   passwordHash!: string;
 
   @Column({ name: 'first_name', length: 100 })
@@ -43,9 +47,9 @@ export class UserEntity {
   // @Column({ name: 'gender', length: 50, nullable: true })
   // gender?: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

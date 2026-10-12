@@ -58,7 +58,7 @@ export class AuthService {
     // login issues locally.
     this.logger.debug(`Login attempt for ${dto.email}`);
 
-    const user = await this.usersService.findByEmail(dto.email);
+    const user = await this.usersService.findByEmailWithPassword(dto.email);
 
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid credentials');
