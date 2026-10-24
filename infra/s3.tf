@@ -34,7 +34,7 @@ resource "aws_s3_bucket_policy" "product_images_public_read" {
       Effect    = "Allow"
       Principal = "*"
       Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.product_images.arn}/*"
+      Resource  = "${aws_s3_bucket.product_images.arn}/products/*"
     }]
   })
 }

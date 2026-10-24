@@ -8,6 +8,7 @@
 // so those fields are optional here.
 
 import { Order } from './order';
+import { ReturnRequest } from './returns';
 import { User } from './user';
 
 export enum TicketCategory {
@@ -107,4 +108,5 @@ export interface CustomerContext {
   profile: User;
   orders: Order[];
   tickets: SupportTicket[];
+  returns: ReturnRequest[];
 }

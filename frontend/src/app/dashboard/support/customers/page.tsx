@@ -8,7 +8,8 @@
 // one, and see their profile, order history, and support ticket history -
 // context for whoever is handling their ticket. Arriving with ?id=... (the
 // "View customer history" button on a ticket) opens that customer directly.
-// Return history gets added here once returns exist (a later phase).
+// Phase 8 added their return history, each row opening the staff Return
+// Details page.
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -33,6 +34,7 @@ import { User } from '@/types/user';
 import { getCustomerContext, searchCustomers } from '@/lib/api/support';
 import { DASHBOARD_ROUTES, SUPPORT_STAFF_ROLES } from '@/lib/dashboard-routes';
 import { CATEGORY_LABELS, CustomerContext, STATUS_COLORS, STATUS_LABELS } from '@/types/support';
+import { RETURN_STATUS_COLORS, RETURN_STATUS_LABELS } from '@/types/returns';
 
 // useSearchParams() requires a Suspense boundary - same reasoning as the
 // shipment detail page.
@@ -219,6 +221,49 @@ function CustomerLookup() {
                               <Chip label={STATUS_LABELS[ticket.status]} size="small" color={STATUS_COLORS[ticket.status]} />
                             </TableCell>
                             <TableCell>{new Date(ticket.updatedAt).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                )}
+              </Box>
+
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1 }}>Returns ({context.returns.length})</Typography>
+                {context.returns.length === 0 ? (
+                  <Typography color="text.secondary">No returns.</Typography>
+                ) : (
+                  <Paper variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Order</TableCell>
+                          <TableCell>Requested</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell align="right">Refund</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {context.returns.map((ret) => (
+                          <TableRow
+                            key={ret.id}
+                            hover
+                            sx={{ cursor: 'pointer' }}
+                            onClick={() => router.push(`/dashboard/support/returns/detail?id=${ret.id}`)}
+                          >
+                            <TableCell sx={{ fontFamily: 'monospace' }}>#{ret.orderId.slice(0, 8)}</TableCell>
+                            <TableCell>{new Date(ret.requestedAt).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={RETURN_STATUS_LABELS[ret.status]}
+                                size="small"
+                                color={RETURN_STATUS_COLORS[ret.status]}
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              {ret.refund ? `$${Number(ret.refund.amount).toFixed(2)}` : '—'}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

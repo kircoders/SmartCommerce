@@ -192,8 +192,18 @@ export default function OrdersPage() {
                                 ))}
                               </TableBody>
                             </Table>
-                            {/* Phase 7 - opens Contact Support with this order pre-selected. */}
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                            {/* Phase 7 - opens Contact Support with this order pre-selected.
+                                Phase 8 - delivered orders can also be returned. */}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                              {order.status === OrderStatus.DELIVERED && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => router.push(`/returns/new?orderId=${order.id}`)}
+                                >
+                                  Request a return
+                                </Button>
+                              )}
                               <Button
                                 size="small"
                                 variant="outlined"

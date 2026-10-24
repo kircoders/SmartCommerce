@@ -4,6 +4,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { OrderEntity } from '../orders/entities/order.entity';
+import { ReturnEntity } from '../returns/entities/return.entity';
 import { UserEntity, UserRole } from '../users/entities/user.entity';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { CreateSupportTicketDto } from './dto/create-support-ticket.dto';
@@ -34,6 +35,8 @@ export class SupportTicketsService {
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(OrderEntity)
     private readonly orderRepo: Repository<OrderEntity>,
+    @InjectRepository(ReturnEntity)
+    private readonly returnRepo: Repository<ReturnEntity>,
   ) {}
 
   // ---- Customer-facing ----
@@ -198,15 +201,21 @@ export class SupportTicketsService {
 
   async getCustomerContext(
     customerId: string,
-  ): Promise<{ profile: UserEntity; orders: OrderEntity[]; tickets: SupportTicketEntity[] }> {
+  ): Promise<{
+    profile: UserEntity;
+    orders: OrderEntity[];
+    tickets: SupportTicketEntity[];
+    returns: ReturnEntity[];
+  }> {
     const profile = await this.userRepo.findOne({ where: { id: customerId, role: UserRole.CUSTOMER } });
     if (!profile) throw new NotFoundException('Customer not found');
 
-    const [orders, tickets] = await Promise.all([
+    const [orders, tickets, returns] = await Promise.all([
       this.orderRepo.find({ where: { customerId }, order: { createdAt: 'DESC' } }),
       this.ticketRepo.find({ where: { customerId }, order: { updatedAt: 'DESC' } }),
+      this.returnRepo.find({ where: { customerId }, relations: { refund: true }, order: { updatedAt: 'DESC' } }),
     ]);
 
-    return { profile, orders, tickets };
+    return { profile, orders, tickets, returns };
   }
 }

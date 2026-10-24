@@ -23,8 +23,8 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductImageEntity } from './entities/product-image.entity';
 import { ProductEntity } from './entities/product.entity';
 
-const BUCKET = 'smartcommerce-product-images-452698428461';
-const REGION = 'us-east-1';
+export const BUCKET = 'smartcommerce-product-images-452698428461';
+export const REGION = 'us-east-1';
 
 // The shape the public read methods actually return - a product plus
 // derived stock info. Not real database columns; computed fresh on every

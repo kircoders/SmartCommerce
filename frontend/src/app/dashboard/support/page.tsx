@@ -100,6 +100,7 @@ export default function SupportDashboard() {
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <Button variant="contained" onClick={() => router.push('/dashboard/support/tickets')}>Support Tickets</Button>
           <Button variant="contained" onClick={() => router.push('/dashboard/support/customers')}>Customer Lookup</Button>
+          <Button variant="contained" onClick={() => router.push('/dashboard/support/returns')}>Returns</Button>
           <Button variant="outlined" onClick={() => router.push('/products')}>Browse Products</Button>
           <Button variant="outlined" onClick={handleLogout}>Logout</Button>
         </Box>

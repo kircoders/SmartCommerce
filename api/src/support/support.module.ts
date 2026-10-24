@@ -3,6 +3,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderEntity } from '../orders/entities/order.entity';
+import { ReturnEntity } from '../returns/entities/return.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { SupportTicketMessageEntity } from './entities/support-ticket-message.entity';
 import { SupportTicketEntity } from './entities/support-ticket.entity';
@@ -12,13 +13,13 @@ import { SupportStaffController } from './support-staff.controller';
 import { SupportTicketsController } from './support-tickets.controller';
 import { SupportTicketsService } from './support-tickets.service';
 
-// UserEntity and OrderEntity are registered here too (not just the two
+// UserEntity, OrderEntity, and ReturnEntity are registered here too (not just the two
 // ticket entities) - SupportTicketsService reads them directly (order
 // ownership checks, customer search, customer lookup context), same
 // reasoning as OrdersModule pulling in CartEntity/InventoryEntity.
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SupportTicketEntity, SupportTicketMessageEntity, UserEntity, OrderEntity]),
+    TypeOrmModule.forFeature([SupportTicketEntity, SupportTicketMessageEntity, UserEntity, OrderEntity, ReturnEntity]),
   ],
   controllers: [
     SupportTicketsController,

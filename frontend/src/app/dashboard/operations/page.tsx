@@ -50,6 +50,7 @@ export default function OperationsDashboard() {
           <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
           <Button variant="outlined" onClick={() => router.push('/inventory')} sx={{ mr: 2 }}>Inventory</Button>
           <Button variant="outlined" onClick={() => router.push('/dashboard/warehouse/shipments')} sx={{ mr: 2 }}>Shipments</Button>
+          <Button variant="outlined" onClick={() => router.push('/dashboard/support/returns')} sx={{ mr: 2 }}>Returns</Button>
           <Button variant="outlined" onClick={handleLogout}>Logout</Button>
         </Box>
       </Box>
