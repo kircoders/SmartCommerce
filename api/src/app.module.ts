@@ -7,6 +7,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { AuthModule } from './auth/auth.module';
 import { CartModule } from './cart/cart.module';
 import configuration from './config/configuration';
+import { IncidentsModule } from './incidents/incidents.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { OrdersModule } from './orders/orders.module';
@@ -48,6 +49,7 @@ import { UsersModule } from './users/users.module';
     ShipmentsModule,
     SupportModule,
     ReturnsModule,
+    IncidentsModule,
   ],
 })
 export class AppModule implements NestModule {

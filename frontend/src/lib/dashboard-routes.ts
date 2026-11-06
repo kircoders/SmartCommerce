@@ -27,3 +27,7 @@ export const SUPPORT_STAFF_ROLES: UserRole[] = [
 // Roles allowed to issue refunds - matches the backend's @Roles on
 // POST /api/refunds. Support agents can review returns but not refund them.
 export const REFUND_ROLES: UserRole[] = [UserRole.OPERATIONS_MANAGER, UserRole.ADMIN];
+
+// Roles allowed into the incident screens - matches the backend's @Roles on
+// IncidentsController.
+export const INCIDENT_ROLES: UserRole[] = [UserRole.OPERATIONS_MANAGER, UserRole.ADMIN];

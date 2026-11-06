@@ -9,6 +9,8 @@
 // server-side, see ShipmentsService.updateStatus()), and/or set the
 // tracking number. Both re-fetch the shipment afterward so shippedDate/
 // deliveredDate stay in sync with whatever the backend actually set.
+// Phase 9 added "Report incident" for operations managers and admins - it
+// opens the new-incident popup with this shipment already filled in.
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -28,6 +30,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/user';
 import { getShipment, updateShipmentStatus, updateTrackingNumber } from '@/lib/api/shipments';
 import { Shipment, ShipmentStatus } from '@/types/shipment';
+import { INCIDENT_ROLES } from '@/lib/dashboard-routes';
+import IncidentFormDialog from '@/components/incidents/IncidentFormDialog';
 
 const ALLOWED_ROLES = [UserRole.WAREHOUSE_OPERATOR, UserRole.OPERATIONS_MANAGER, UserRole.ADMIN];
 
@@ -55,6 +59,8 @@ function ShipmentDetailForm() {
 
   const [trackingNumber, setTrackingNumber] = useState('');
   const [savingTracking, setSavingTracking] = useState(false);
+
+  const [reportingIncident, setReportingIncident] = useState(false);
 
   function refreshShipment(currentToken: string) {
     return getShipment(currentToken, shipmentId).then((data) => {
@@ -106,7 +112,7 @@ function ShipmentDetailForm() {
     }
   }
 
-  if (!user || !ALLOWED_ROLES.includes(user.role)) return null;
+  if (!user || !token || !ALLOWED_ROLES.includes(user.role)) return null;
 
   if (!shipment) {
     return (
@@ -121,9 +127,16 @@ function ShipmentDetailForm() {
       <Box sx={{ width: 480 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5">Shipment Detail</Typography>
-          <Button variant="outlined" size="small" onClick={() => router.push('/dashboard/warehouse/shipments')}>
-            Back to Queue
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {INCIDENT_ROLES.includes(user.role) && (
+              <Button variant="outlined" size="small" color="warning" onClick={() => setReportingIncident(true)}>
+                Report incident
+              </Button>
+            )}
+            <Button variant="outlined" size="small" onClick={() => router.push('/dashboard/warehouse/shipments')}>
+              Back to Queue
+            </Button>
+          </Box>
         </Box>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -195,6 +208,14 @@ function ShipmentDetailForm() {
             {savingTracking ? 'Saving...' : 'Update Tracking Number'}
           </Button>
         </Box>
+
+        <IncidentFormDialog
+          open={reportingIncident}
+          token={token}
+          presetShipmentId={shipment.id}
+          onClose={() => setReportingIncident(false)}
+          onSaved={(incident) => router.push(`/dashboard/incidents/detail?id=${incident.id}`)}
+        />
       </Box>
     </Box>
   );
