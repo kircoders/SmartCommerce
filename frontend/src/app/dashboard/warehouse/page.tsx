@@ -1,58 +1,100 @@
 'use client';
 
-// Phase 1
-
+// Phase 1 (placeholder), filled in Phase 10
 
 // WHAT THIS FILE IS:
-// The Warehouse Operator Dashboard — what a WAREHOUSE_OPERATOR role user sees after logging in.
-// Placeholder for Phase 1. In Phase 6 (Shipping & Warehouse Fulfillment), this will show
-// shipment queues, warehouse workflows, delivery confirmations, etc.
-//
-// WHAT IT DOES:
-// 1. Checks if the user is logged in. If not, redirects to /login.
-// 2. Displays a welcome message with the user's first name and role
-// 3. Provides a Logout button
+// The Warehouse Dashboard - WAREHOUSE_OPERATOR (plus OPERATIONS_MANAGER and
+// ADMIN, same as the shipments and inventory screens). One request to
+// GET /api/dashboard/warehouse brings back how many orders are waiting to
+// be packed or shipped, an inventory summary, and the products at or
+// below their low-stock threshold (lowest first).
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import { useAuth } from '@/hooks/useAuth';
-import { logout } from '@/lib/api/auth';
-import AnnouncementBanner from '@/components/ui/AnnouncementBanner';
+import DashboardShell, { TwoColumns } from '@/components/dashboard/DashboardShell';
+import FiguresCard from '@/components/dashboard/FiguresCard';
+import ListCard from '@/components/dashboard/ListCard';
+import StatCards from '@/components/dashboard/StatCards';
+import { useDashboard } from '@/hooks/useDashboard';
+import { getWarehouseDashboard } from '@/lib/api/dashboard';
+import { UserRole } from '@/types/user';
+
+const WAREHOUSE_ROLES = [UserRole.WAREHOUSE_OPERATOR, UserRole.OPERATIONS_MANAGER, UserRole.ADMIN];
 
 export default function WarehouseDashboard() {
-  const router = useRouter();
-  const { user, token, loading, clearAuth } = useAuth();
+  const { user, allowed, data, error, handleLogout } = useDashboard(WAREHOUSE_ROLES, getWarehouseDashboard);
 
-  useEffect(() => {
-    if (!loading && !token) router.push('/login');
-  }, [token, loading, router]);
+  if (!user || !allowed) return null;
 
-  async function handleLogout() {
-    if (token) await logout(token);
-    clearAuth();
-    router.push('/login');
-  }
-
-  if (!user) return null;
+  const lowStock = data?.counts.lowStockProducts ?? null;
 
   return (
-    <Box>
-      <AnnouncementBanner />
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h4" sx={{ mb: 2 }}>Warehouse Dashboard</Typography>
-          <Typography variant="body1" sx={{ mb: 4 }}>
-            Welcome, {user.firstName}! You are logged in as {user.role}.
-          </Typography>
-          <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
-          <Button variant="outlined" onClick={() => router.push('/inventory')} sx={{ mr: 2 }}>Inventory</Button>
-          <Button variant="outlined" onClick={() => router.push('/dashboard/warehouse/shipments')} sx={{ mr: 2 }}>Shipments</Button>
-          <Button variant="outlined" onClick={handleLogout}>Logout</Button>
-        </Box>
-      </Box>
-    </Box>
+    <DashboardShell
+      title="Warehouse Dashboard"
+      firstName={user.firstName}
+      error={error}
+      onLogout={handleLogout}
+      links={[
+        { label: 'Shipments', href: '/dashboard/warehouse/shipments' },
+        { label: 'Inventory', href: '/inventory' },
+        { label: 'Browse Products', href: '/products' },
+      ]}
+    >
+      <StatCards
+        cards={[
+          {
+            label: 'Orders to fulfill',
+            value: data?.counts.awaitingFulfillment ?? null,
+            caption: 'Not shipped yet',
+            href: '/dashboard/warehouse/shipments',
+          },
+          { label: 'Waiting to pack', value: data?.counts.awaitingPacking ?? null, href: '/dashboard/warehouse/shipments' },
+          { label: 'Packed, waiting to ship', value: data?.counts.awaitingShipment ?? null, href: '/dashboard/warehouse/shipments' },
+          {
+            label: 'Low stock',
+            value: lowStock,
+            color: lowStock ? 'warning.main' : undefined,
+            href: '/inventory',
+          },
+        ]}
+      />
+
+      <TwoColumns>
+        <ListCard
+          title="Low stock alerts"
+          emptyText="Every product is above its low-stock level."
+          action={{ label: 'Inventory', href: '/inventory' }}
+          rows={
+            data?.lowStock.map((item) => ({
+              key: item.productId,
+              primary: item.productName,
+              secondary: `${item.quantityAvailable} available · alert at ${item.lowStockThreshold}`,
+              chip:
+                item.quantityAvailable === 0
+                  ? { label: 'Out of stock', color: 'error' as const }
+                  : { label: 'Low', color: 'warning' as const },
+              href: `/inventory/edit?id=${item.productId}`,
+            })) ?? null
+          }
+        />
+
+        <FiguresCard
+          title="Inventory summary"
+          figures={
+            data
+              ? [
+                  { label: 'Products tracked', value: data.inventory.products },
+                  {
+                    label: 'Out of stock',
+                    value: data.inventory.outOfStock,
+                    color: data.inventory.outOfStock > 0 ? 'error.main' : undefined,
+                  },
+                  { label: 'Units available', value: data.inventory.unitsAvailable },
+                  { label: 'Units reserved for orders', value: data.inventory.unitsReserved },
+                ]
+              : null
+          }
+        />
+      </TwoColumns>
+    </DashboardShell>
   );
 }
+

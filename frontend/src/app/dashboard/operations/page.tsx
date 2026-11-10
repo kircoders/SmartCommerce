@@ -1,113 +1,129 @@
 'use client';
 
-// Phase 1
-
+// Phase 1 (placeholder), Phase 9 (incident cards), filled in Phase 10
 
 // WHAT THIS FILE IS:
-// The Operations Manager Dashboard — what an OPERATIONS_MANAGER role user sees after logging in.
-// Placeholder for Phase 1. In Phase 10 (Reporting & Role-Based Dashboards), this will show
-// KPIs, business reports, operational summaries, analytics, etc.
+// The Operations Dashboard - OPERATIONS_MANAGER and ADMIN. The business at
+// a glance, from GET /api/dashboard/operations: total orders and revenue,
+// pending work in every area (shipments, tickets, returns, incidents), low
+// stock, orders by status, and a basic system status check.
 //
-// WHAT IT DOES:
-// 1. Checks if the user is logged in. If not, redirects to /login.
-// 2. Displays a welcome message with the user's first name and role
-// 3. Provides a Logout button
-//
-// Phase 9 added the incident summary - open (open or in progress),
-// critical (still unresolved), and resolved in the last 7 days. Open and
-// critical link to the Incidents page with that filter already applied.
+// The incident cards from Phase 9 stay as their own row, so the dashboard
+// also loads GET /api/incidents/summary for "resolved this week". Open and
+// Critical still link to the Incidents page with that filter applied.
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardActionArea from '@mui/material/CardActionArea';
-import CardContent from '@mui/material/CardContent';
-import { useAuth } from '@/hooks/useAuth';
-import { logout } from '@/lib/api/auth';
-import AnnouncementBanner from '@/components/ui/AnnouncementBanner';
+import DashboardShell, { TwoColumns } from '@/components/dashboard/DashboardShell';
+import FiguresCard from '@/components/dashboard/FiguresCard';
+import ListCard from '@/components/dashboard/ListCard';
+import StatCards from '@/components/dashboard/StatCards';
+import SystemStatusCard from '@/components/dashboard/SystemStatusCard';
+import { useDashboard } from '@/hooks/useDashboard';
+import { getOperationsDashboard } from '@/lib/api/dashboard';
 import { getIncidentSummary } from '@/lib/api/incidents';
-import { IncidentSummary } from '@/types/incident';
+import { INCIDENT_ROLES } from '@/lib/dashboard-routes';
+import { formatMoney, humanize } from '@/types/dashboard';
+import { OrderStatus } from '@/types/order';
 
-interface SummaryCard {
-  label: string;
-  value: number;
-  color: 'text.primary' | 'error.main' | 'success.main';
-  href?: string;
+async function loadOperations(token: string) {
+  const [dashboard, incidents] = await Promise.all([getOperationsDashboard(token), getIncidentSummary(token)]);
+  return { dashboard, incidents };
 }
 
 export default function OperationsDashboard() {
-  const router = useRouter();
-  const { user, token, loading, clearAuth } = useAuth();
-  const [summary, setSummary] = useState<IncidentSummary | null>(null);
+  const { user, allowed, data, error, handleLogout } = useDashboard(INCIDENT_ROLES, loadOperations);
 
-  useEffect(() => {
-    if (!loading && !token) router.push('/login');
-    // The summary is a nice-to-have - if it fails the dashboard still works.
-    if (token) getIncidentSummary(token).then(setSummary).catch(() => setSummary(null));
-  }, [token, loading, router]);
+  if (!user || !allowed) return null;
 
-  async function handleLogout() {
-    if (token) await logout(token);
-    clearAuth();
-    router.push('/login');
-  }
-
-  if (!user) return null;
-
-  const cards: SummaryCard[] = summary
-    ? [
-        { label: 'Open incidents', value: summary.open, color: 'text.primary', href: '/dashboard/incidents?status=UNRESOLVED' },
-        {
-          label: 'Critical',
-          value: summary.critical,
-          color: summary.critical > 0 ? 'error.main' : 'text.primary',
-          href: '/dashboard/incidents?status=UNRESOLVED&severity=CRITICAL',
-        },
-        { label: 'Resolved this week', value: summary.recentlyResolved, color: 'success.main' },
-      ]
-    : [];
+  const d = data?.dashboard;
+  const critical = d?.counts.criticalIncidents ?? null;
+  const lowStock = d?.counts.lowStockProducts ?? null;
 
   return (
-    <Box>
-      <AnnouncementBanner />
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h4" sx={{ mb: 2 }}>Operations Dashboard</Typography>
-          <Typography variant="body1" sx={{ mb: 4 }}>
-            Welcome, {user.firstName}! You are logged in as {user.role}.
-          </Typography>
-          {cards.length > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
-              {cards.map((card) => {
-                const content = (
-                  <CardContent>
-                    <Typography variant="h3" sx={{ color: card.color }}>{card.value}</Typography>
-                    <Typography variant="body2" color="text.secondary">{card.label}</Typography>
-                  </CardContent>
-                );
-                return (
-                  <Card key={card.label} variant="outlined" sx={{ width: 180 }}>
-                    {card.href ? (
-                      <CardActionArea onClick={() => card.href && router.push(card.href)}>{content}</CardActionArea>
-                    ) : (
-                      content
-                    )}
-                  </Card>
-                );
-              })}
-            </Box>
-          )}
-          <Button variant="outlined" onClick={() => router.push('/products')} sx={{ mr: 2 }}>Browse Products</Button>
-          <Button variant="outlined" onClick={() => router.push('/inventory')} sx={{ mr: 2 }}>Inventory</Button>
-          <Button variant="outlined" onClick={() => router.push('/dashboard/warehouse/shipments')} sx={{ mr: 2 }}>Shipments</Button>
-          <Button variant="outlined" onClick={() => router.push('/dashboard/support/returns')} sx={{ mr: 2 }}>Returns</Button>
-          <Button variant="outlined" onClick={() => router.push('/dashboard/incidents')} sx={{ mr: 2 }}>Incidents</Button>
-          <Button variant="outlined" onClick={handleLogout}>Logout</Button>
-        </Box>
-      </Box>
-    </Box>
+    <DashboardShell
+      title="Operations Dashboard"
+      firstName={user.firstName}
+      error={error}
+      onLogout={handleLogout}
+      links={[
+        { label: 'Reports', href: '/dashboard/reports' },
+        { label: 'Shipments', href: '/dashboard/warehouse/shipments' },
+        { label: 'Inventory', href: '/inventory' },
+        { label: 'Support Tickets', href: '/dashboard/support/tickets' },
+        { label: 'Returns', href: '/dashboard/support/returns' },
+        { label: 'Incidents', href: '/dashboard/incidents' },
+        { label: 'Browse Products', href: '/products' },
+      ]}
+    >
+      <StatCards
+        cards={[
+          { label: 'Total orders', value: d?.counts.totalOrders ?? null },
+          {
+            label: 'Net revenue',
+            value: d ? formatMoney(d.revenue.net) : null,
+            caption: d ? `${formatMoney(d.revenue.gross)} sales − ${formatMoney(d.revenue.refunded)} refunded` : undefined,
+          },
+          { label: 'Pending shipments', value: d?.counts.pendingShipments ?? null, href: '/dashboard/warehouse/shipments' },
+          { label: 'Open tickets', value: d?.counts.openTickets ?? null, href: '/dashboard/support/tickets' },
+          {
+            label: 'Returns to review',
+            value: d?.counts.returnsAwaitingReview ?? null,
+            href: '/dashboard/support/returns?status=REQUESTED',
+          },
+          {
+            label: 'Returns to refund',
+            value: d?.counts.returnsAwaitingRefund ?? null,
+            caption: 'Received back, not refunded',
+            href: '/dashboard/support/returns?status=RECEIVED',
+          },
+          {
+            label: 'Low stock',
+            value: lowStock,
+            color: lowStock ? 'warning.main' : undefined,
+            href: '/inventory',
+          },
+        ]}
+      />
+
+      <Typography variant="h6" sx={{ mb: 1 }}>Incidents</Typography>
+      <StatCards
+        cards={[
+          { label: 'Open', value: data?.incidents.open ?? null, href: '/dashboard/incidents?status=UNRESOLVED' },
+          {
+            label: 'Critical',
+            value: critical,
+            color: critical ? 'error.main' : undefined,
+            href: '/dashboard/incidents?status=UNRESOLVED&severity=CRITICAL',
+          },
+          { label: 'Resolved this week', value: data?.incidents.recentlyResolved ?? null, color: 'success.main' },
+        ]}
+      />
+
+      <TwoColumns>
+        <FiguresCard
+          title="Orders by status"
+          figures={d ? Object.values(OrderStatus).map((s) => ({ label: humanize(s), value: d.ordersByStatus[s] })) : null}
+        />
+        <ListCard
+          title="Low stock alerts"
+          emptyText="Every product is above its low-stock level."
+          action={{ label: 'Inventory', href: '/inventory' }}
+          rows={
+            d?.lowStock.map((item) => ({
+              key: item.productId,
+              primary: item.productName,
+              secondary: `${item.quantityAvailable} available · alert at ${item.lowStockThreshold}`,
+              chip:
+                item.quantityAvailable === 0
+                  ? { label: 'Out of stock', color: 'error' as const }
+                  : { label: 'Low', color: 'warning' as const },
+              href: `/inventory/edit?id=${item.productId}`,
+            })) ?? null
+          }
+        />
+      </TwoColumns>
+
+      {d && <SystemStatusCard status={d.systemStatus} />}
+    </DashboardShell>
   );
 }

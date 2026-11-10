@@ -25,7 +25,9 @@ Write-Host "=== SmartCommerce: Deploying new API image ===" -ForegroundColor Cya
 # Docker needs a short-lived auth token to push to a private ECR repo -
 # this fetches one from AWS and feeds it straight into `docker login`.
 Write-Host "[1/4] Logging into ECR..." -ForegroundColor Yellow
-aws ecr get-login-password --region $Region | docker login --username AWS --password-stdin "$AccountId.dkr.ecr.$Region.amazonaws.com"
+# Piped through cmd: Windows PowerShell 5.1 re-encodes text sent between
+# two programs, which corrupts the password and makes ECR return 400.
+cmd /c "aws ecr get-login-password --region $Region | docker login --username AWS --password-stdin $AccountId.dkr.ecr.$Region.amazonaws.com"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 2. Build
@@ -39,8 +41,8 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 # App Runner always pulls the ":latest" tag, so every deploy overwrites it -
 # there's no separate versioned tag being kept around here.
 Write-Host "[3/4] Pushing to ECR..." -ForegroundColor Yellow
-docker tag smartcommerce-api:latest "$EcrRepo:latest"
-docker push "$EcrRepo:latest"
+docker tag smartcommerce-api:latest "${EcrRepo}:latest"
+docker push "${EcrRepo}:latest"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 4. Trigger App Runner redeploy
