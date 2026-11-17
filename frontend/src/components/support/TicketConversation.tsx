@@ -25,12 +25,25 @@ interface TicketConversationProps {
   ticket: SupportTicket;
   currentUserId: string;
   onReply: (message: string) => Promise<void>;
+  // Phase 11 - text to put in the reply box (the agent page's AI "Use as
+  // reply"). `version` changes on every click, so using the same draft
+  // twice still refills the box.
+  draft?: { text: string; version: number };
 }
 
-export default function TicketConversation({ ticket, currentUserId, onReply }: TicketConversationProps) {
+export default function TicketConversation({ ticket, currentUserId, onReply, draft }: TicketConversationProps) {
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+
+  // When a new draft arrives, replace the reply box text with it. Done
+  // during render (React's pattern for "reset state when a prop changes")
+  // rather than in an effect.
+  const [appliedDraft, setAppliedDraft] = useState(draft);
+  if (draft !== appliedDraft) {
+    setAppliedDraft(draft);
+    if (draft) setReply(draft.text);
+  }
 
   const isClosed = ticket.status === TicketStatus.CLOSED;
   const customerName = ticket.customer

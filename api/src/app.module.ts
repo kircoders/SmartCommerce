@@ -3,6 +3,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AiModule } from './ai/ai.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AuthModule } from './auth/auth.module';
 import { CartModule } from './cart/cart.module';
@@ -54,6 +55,7 @@ import { UsersModule } from './users/users.module';
     IncidentsModule,
     DashboardModule,
     ReportsModule,
+    AiModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -8,7 +8,7 @@
 //   - Left: the conversation (shared TicketConversation) with a reply box.
 //   - Right: everything an agent acts on or needs for context - status and
 //     assignment controls, customer info (linking to Customer Lookup),
-//     related order, and a placeholder for the AI assistant (a later phase).
+//     related order, and the AI assistant (Phase 11 - TicketAiPanel).
 // Every action re-fetches the ticket afterward, so the page always shows
 // what the backend actually saved.
 
@@ -37,6 +37,7 @@ import {
 } from '@/lib/api/support';
 import { DASHBOARD_ROUTES, SUPPORT_STAFF_ROLES } from '@/lib/dashboard-routes';
 import TicketConversation from '@/components/support/TicketConversation';
+import TicketAiPanel from '@/components/ai/TicketAiPanel';
 import {
   CATEGORY_LABELS,
   PRIORITY_COLORS,
@@ -68,6 +69,8 @@ function AgentTicketDetail() {
   const [newAgentId, setNewAgentId] = useState('');
   const [saving, setSaving] = useState<'status' | 'assign' | null>(null);
   const [error, setError] = useState('');
+  // Phase 11 - an AI draft the agent chose to put in the reply box.
+  const [draft, setDraft] = useState<{ text: string; version: number } | undefined>(undefined);
 
   function applyTicket(data: SupportTicket) {
     setTicket(data);
@@ -145,7 +148,7 @@ function AgentTicketDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 4, alignItems: 'start' }}>
-        <TicketConversation ticket={ticket} currentUserId={user.id} onReply={handleReply} />
+        <TicketConversation ticket={ticket} currentUserId={user.id} onReply={handleReply} draft={draft} />
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Paper variant="outlined" sx={{ p: 2 }}>
@@ -253,14 +256,13 @@ function AgentTicketDetail() {
             )}
           </Paper>
 
-          {/* Placeholder only - the AI assistant (complaint summaries,
-              suggested replies) is built in a later phase. */}
-          <Paper variant="outlined" sx={{ p: 2, borderStyle: 'dashed' }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>AI Assistant</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Coming soon: complaint summaries and suggested replies.
-            </Typography>
-          </Paper>
+          {/* Phase 11 - Summarize / Suggest response / Explain issue. */}
+          <TicketAiPanel
+            token={currentToken}
+            ticketId={ticket.id}
+            canReply={ticket.status !== TicketStatus.CLOSED}
+            onUseDraft={(text) => setDraft((prev) => ({ text, version: (prev?.version ?? 0) + 1 }))}
+          />
         </Box>
       </Box>
     </Box>

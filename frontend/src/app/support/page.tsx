@@ -8,6 +8,7 @@
 // findAllForCustomer() ordering), so a ticket with a new agent reply rises
 // to the top. Clicking a row opens its details (?id=..., same query-param
 // pattern as every other detail page in this static-export app).
+// Phase 11: the AI assistant chat (CustomerChat) sits below the list.
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,6 +28,7 @@ import Paper from '@mui/material/Paper';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/user';
 import { getMyTickets } from '@/lib/api/support';
+import CustomerChat from '@/components/ai/CustomerChat';
 import { DASHBOARD_ROUTES } from '@/lib/dashboard-routes';
 import { CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, SupportTicket } from '@/types/support';
 
@@ -111,6 +113,13 @@ export default function MyTicketsPage() {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* Phase 11 - the AI chat, below the ticket list. */}
+      {token && (
+        <Box sx={{ mt: 4, maxWidth: 720 }}>
+          <CustomerChat token={token} />
+        </Box>
       )}
     </Box>
   );
