@@ -20,11 +20,11 @@ Write-Host "=== SmartCommerce: Shutting down ===" -ForegroundColor Yellow
 $Services = aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='smartcommerce-api']" --output json | ConvertFrom-Json
 
 if ($Services.Count -eq 0) {
-    Write-Host "[1/2] No App Runner service found - skipping." -ForegroundColor Yellow
+    Write-Host "[1/3] No App Runner service found - skipping." -ForegroundColor Yellow
 } elseif ($Services[0].Status -eq "PAUSED") {
-    Write-Host "[1/2] App Runner already paused." -ForegroundColor Green
+    Write-Host "[1/3] App Runner already paused." -ForegroundColor Green
 } else {
-    Write-Host "[1/2] Pausing App Runner..." -ForegroundColor Yellow
+    Write-Host "[1/3] Pausing App Runner..." -ForegroundColor Yellow
     aws apprunner pause-service --service-arn $Services[0].ServiceArn | Out-Null
 
     # Pausing is async - poll until AWS actually reports PAUSED before moving on.
@@ -41,16 +41,31 @@ if ($Services.Count -eq 0) {
 $RdsStatus = (aws rds describe-db-instances --db-instance-identifier $RdsId --query "DBInstances[0].DBInstanceStatus" --output text)
 
 if ($RdsStatus -eq "stopped") {
-    Write-Host "[2/2] RDS already stopped." -ForegroundColor Green
+    Write-Host "[2/3] RDS already stopped." -ForegroundColor Green
 } elseif ($RdsStatus -eq "available") {
-    Write-Host "[2/2] Stopping RDS..." -ForegroundColor Yellow
+    Write-Host "[2/3] Stopping RDS..." -ForegroundColor Yellow
     # Unlike App Runner, this doesn't poll for completion - it just kicks off
     # the stop and returns immediately; RDS finishes stopping in the background.
     aws rds stop-db-instance --db-instance-identifier $RdsId | Out-Null
     Write-Host "      RDS is stopping (happens in the background)." -ForegroundColor Green
 } else {
     # e.g. already "stopping" or "starting" - can't stop from those states.
-    Write-Host "[2/2] RDS is $RdsStatus - skipping stop." -ForegroundColor Yellow
+    Write-Host "[2/3] RDS is $RdsStatus - skipping stop." -ForegroundColor Yellow
+}
+
+# Step 3 (Phase 12): Delete the Bedrock VPC endpoint
+# It bills ~$0.01/hour whether or not anything uses it, so it only exists
+# while the app is up. up.ps1 re-creates it. (Its security group is free
+# and stays - Terraform owns that.)
+$EndpointName = "smartcommerce-bedrock-endpoint"
+$EndpointId = (aws ec2 describe-vpc-endpoints --filters "Name=tag:Name,Values=$EndpointName" "Name=vpc-endpoint-state,Values=pending,available" --query "VpcEndpoints[0].VpcEndpointId" --output text)
+
+if ($EndpointId -and $EndpointId -ne "None") {
+    Write-Host "[3/3] Deleting Bedrock endpoint..." -ForegroundColor Yellow
+    aws ec2 delete-vpc-endpoints --vpc-endpoint-ids $EndpointId | Out-Null
+    Write-Host "      Bedrock endpoint is deleting (happens in the background)." -ForegroundColor Green
+} else {
+    Write-Host "[3/3] No Bedrock endpoint - skipping." -ForegroundColor Green
 }
 
 Write-Host ""

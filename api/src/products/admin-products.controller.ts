@@ -24,6 +24,11 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductImageEntity } from './entities/product-image.entity';
 import { ProductEntity } from './entities/product.entity';
 import { ProductsService } from './products.service';
+import { Audit, field, shortId } from '../audit-logs/audit.decorator';
+import {
+  AuditAction,
+  AuditEntityType,
+} from '../audit-logs/entities/audit-log.entity';
 
 // Admin-only routes for managing the catalog (create/update/delete products
 // and their images). Contrast with products.controller.ts, which exposes
@@ -53,6 +58,11 @@ export class AdminProductsController {
   // @CurrentUser() pulls the logged-in user off the request (attached by
   // JwtAuthGuard) so we know who to credit as the creator.
   @Post()
+  @Audit({
+    action: AuditAction.PRODUCT_CREATED,
+    entityType: AuditEntityType.PRODUCT,
+    describe: ({ data }) => `Created product "${field(data, 'name')}"`,
+  })
   @ApiOperation({ summary: 'Create a new product (admin only)' })
   async create(
     @Body() dto: CreateProductDto,
@@ -69,6 +79,12 @@ export class AdminProductsController {
   // Partial update - UpdateProductDto makes every field optional, so you
   // only need to send the fields you're changing.
   @Put(':id')
+  @Audit({
+    action: AuditAction.PRODUCT_UPDATED,
+    entityType: AuditEntityType.PRODUCT,
+    describe: ({ data, body }) =>
+      `Updated product "${field(data, 'name')}" (${Object.keys(body).join(', ')})`,
+  })
   @ApiOperation({ summary: 'Update a product (admin only, partial update)' })
   async update(
     @Param('id') id: string,
@@ -82,8 +98,18 @@ export class AdminProductsController {
   // Deletes the product AND all of its S3 images (handled inside the
   // service, not here) - this route just triggers it.
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a product, its images, inventory, and any cart items referencing it (admin only)' })
-  async remove(@Param('id') id: string): Promise<{ data: null; message: string }> {
+  @Audit({
+    action: AuditAction.PRODUCT_DELETED,
+    entityType: AuditEntityType.PRODUCT,
+    describe: ({ params }) => `Deleted product ${shortId(params['id'] ?? '')}`,
+  })
+  @ApiOperation({
+    summary:
+      'Delete a product, its images, inventory, and any cart items referencing it (admin only)',
+  })
+  async remove(
+    @Param('id') id: string,
+  ): Promise<{ data: null; message: string }> {
     await this.productsService.remove(id);
     return { data: null, message: 'Product deleted' };
   }
@@ -96,14 +122,21 @@ export class AdminProductsController {
   // query param arrives as a string ("true"/"false"), hence the explicit
   // comparison rather than treating it as a boolean directly.
   @Post(':id/images')
-  @ApiOperation({ summary: 'Upload a product image (admin only, multipart/form-data)' })
+  @ApiOperation({
+    summary: 'Upload a product image (admin only, multipart/form-data)',
+  })
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(
     @Param('id') id: string,
-    @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype: string },
+    @UploadedFile()
+    file: { buffer: Buffer; originalname: string; mimetype: string },
     @Query('primary') primary: string,
   ): Promise<{ data: ProductImageEntity }> {
-    const data = await this.productsService.uploadImage(id, file, primary === 'true');
+    const data = await this.productsService.uploadImage(
+      id,
+      file,
+      primary === 'true',
+    );
     return { data };
   }
 

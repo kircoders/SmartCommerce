@@ -1,6 +1,14 @@
 // Phase 3
 
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -12,6 +20,11 @@ import { UpdateInventoryDto } from './dto/update-inventory.dto';
 import { InventoryAdjustmentEntity } from './entities/inventory-adjustment.entity';
 import { InventoryEntity } from './entities/inventory.entity';
 import { InventoryService } from './inventory.service';
+import { Audit, field, shortId } from '../audit-logs/audit.decorator';
+import {
+  AuditAction,
+  AuditEntityType,
+} from '../audit-logs/entities/audit-log.entity';
 
 // Unlike products (public read-only controller + separate admin-only
 // controller), inventory has ONE access tier for everything - reads
@@ -26,7 +39,9 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all inventory records (warehouse/ops/admin only)' })
+  @ApiOperation({
+    summary: 'List all inventory records (warehouse/ops/admin only)',
+  })
   async findAll(): Promise<{ data: InventoryEntity[] }> {
     const data = await this.inventoryService.findAll();
     return { data };
@@ -35,7 +50,9 @@ export class InventoryController {
   // Must come before @Get(':productId') - otherwise "low-stock" would
   // match as a literal productId instead of hitting this route.
   @Get('low-stock')
-  @ApiOperation({ summary: 'List products at or below their low-stock threshold' })
+  @ApiOperation({
+    summary: 'List products at or below their low-stock threshold',
+  })
   async findLowStock(): Promise<{ data: InventoryEntity[] }> {
     const data = await this.inventoryService.findLowStock();
     return { data };
@@ -43,13 +60,24 @@ export class InventoryController {
 
   @Get(':productId')
   @ApiOperation({ summary: "Get one product's inventory record" })
-  async findOne(@Param('productId') productId: string): Promise<{ data: InventoryEntity }> {
+  async findOne(
+    @Param('productId') productId: string,
+  ): Promise<{ data: InventoryEntity }> {
     const data = await this.inventoryService.findOne(productId);
     return { data };
   }
 
   @Put(':productId')
-  @ApiOperation({ summary: 'Directly correct stock quantities/threshold (no audit trail)' })
+  @Audit({
+    action: AuditAction.INVENTORY_ADJUSTED,
+    entityType: AuditEntityType.PRODUCT,
+    entityId: ({ params }) => params['productId'] ?? null,
+    describe: ({ data, params }) =>
+      `Directly set stock for product ${shortId(params['productId'] ?? '')}: ${field(data, 'quantityAvailable')} available, ${field(data, 'quantityTotal')} total`,
+  })
+  @ApiOperation({
+    summary: 'Directly correct stock quantities/threshold (no audit trail)',
+  })
   async update(
     @Param('productId') productId: string,
     @Body() dto: UpdateInventoryDto,
@@ -59,7 +87,18 @@ export class InventoryController {
   }
 
   @Post('adjustments')
-  @ApiOperation({ summary: 'Record an audited stock change (increase/decrease/correction)' })
+  @Audit({
+    action: AuditAction.INVENTORY_ADJUSTED,
+    entityType: AuditEntityType.PRODUCT,
+    entityId: ({ data }) => field(data, 'productId') || null,
+    describe: ({ data }) => {
+      const change = Number(field(data, 'quantityChange'));
+      return `${field(data, 'adjustmentType')} ${change > 0 ? '+' : ''}${change} for product ${shortId(field(data, 'productId'))}`;
+    },
+  })
+  @ApiOperation({
+    summary: 'Record an audited stock change (increase/decrease/correction)',
+  })
   async createAdjustment(
     @Body() dto: CreateAdjustmentDto,
     @CurrentUser() user: { id: string },

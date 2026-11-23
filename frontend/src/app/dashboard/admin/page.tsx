@@ -39,6 +39,7 @@ export default function AdminDashboard() {
         { label: 'Support Tickets', href: '/dashboard/support/tickets' },
         { label: 'Returns', href: '/dashboard/support/returns' },
         { label: 'Incidents', href: '/dashboard/incidents' },
+        { label: 'Audit Logs', href: '/dashboard/admin/audit-logs' },
         { label: 'Browse Products', href: '/products' },
         { label: 'My Profile', href: '/profile' },
       ]}

@@ -3,6 +3,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
@@ -76,6 +77,12 @@ async function bootstrap() {
   // one brief startup window instead.
   const app = await NestFactory.create(AppModule, { rawBody: false });
 
+  // Phase 12: App Runner sits behind a load balancer, so without this every
+  // request looks like it comes from the balancer's IP - and the login limit
+  // (ThrottlerGuard) would count everyone as one person. This tells Express
+  // to use the real client IP from the X-Forwarded-For header instead.
+  (app as NestExpressApplication).set('trust proxy', 1);
+
   // Now that the app exists, ConfigService is available - build the real
   // Winston logger from the actual config file and swap it in.
   const config = app.get(ConfigService);
@@ -99,15 +106,17 @@ async function bootstrap() {
     'http://localhost:3000', // Swagger UI itself, served from the API - PUT/POST calls made from /api/docs send this as their Origin
     'http://localhost:3001',
     'https://main.dwdi02ueunudy.amplifyapp.com',
+    // Swagger UI on the live API. Phase 12: this used to be any origin ending
+    // in .awsapprunner.com - but anyone can deploy an App Runner app, so only
+    // our own service is trusted now.
+    'https://3hfuwvhp27.us-east-1.awsapprunner.com',
   ];
+  // A list of origins: allowed ones get the Access-Control-Allow-Origin
+  // header; any other site just gets no CORS header, so the browser blocks
+  // it from reading the response. (Phase 12: this used to throw an Error for
+  // other origins, which turned every such request into a 500.)
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.awsapprunner.com')) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   });
 

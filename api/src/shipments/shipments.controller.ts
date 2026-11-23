@@ -1,7 +1,20 @@
 // Phase 6
 
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -11,6 +24,11 @@ import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
 import { UpdateTrackingNumberDto } from './dto/update-tracking-number.dto';
 import { ShipmentEntity, ShipmentStatus } from './entities/shipment.entity';
 import { ShipmentsService } from './shipments.service';
+import { Audit, field, shortId } from '../audit-logs/audit.decorator';
+import {
+  AuditAction,
+  AuditEntityType,
+} from '../audit-logs/entities/audit-log.entity';
 
 // Warehouse-facing routes - restricted to the roles that actually run
 // fulfillment, not customers (their own read-only view is on
@@ -24,9 +42,13 @@ export class ShipmentsController {
   constructor(private readonly shipmentsService: ShipmentsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List the warehouse shipment queue, optionally filtered by status' })
+  @ApiOperation({
+    summary: 'List the warehouse shipment queue, optionally filtered by status',
+  })
   @ApiQuery({ name: 'status', enum: ShipmentStatus, required: false })
-  async findAll(@Query('status') status?: ShipmentStatus): Promise<{ data: ShipmentEntity[] }> {
+  async findAll(
+    @Query('status') status?: ShipmentStatus,
+  ): Promise<{ data: ShipmentEntity[] }> {
     const data = await this.shipmentsService.findQueue(status);
     return { data };
   }
@@ -39,7 +61,16 @@ export class ShipmentsController {
   }
 
   @Patch(':id/status')
-  @ApiOperation({ summary: "Update a shipment's status (also syncs the linked order's status)" })
+  @Audit({
+    action: AuditAction.SHIPMENT_STATUS_UPDATED,
+    entityType: AuditEntityType.SHIPMENT,
+    describe: ({ data }) =>
+      `Shipment for order ${shortId(field(data, 'orderId'))} set to ${field(data, 'status')}`,
+  })
+  @ApiOperation({
+    summary:
+      "Update a shipment's status (also syncs the linked order's status)",
+  })
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateShipmentStatusDto,
@@ -49,6 +80,12 @@ export class ShipmentsController {
   }
 
   @Patch(':id/tracking')
+  @Audit({
+    action: AuditAction.SHIPMENT_TRACKING_UPDATED,
+    entityType: AuditEntityType.SHIPMENT,
+    describe: ({ data }) =>
+      `Tracking number for order ${shortId(field(data, 'orderId'))} set to ${field(data, 'trackingNumber')}`,
+  })
   @ApiOperation({ summary: "Set a shipment's carrier tracking number" })
   async updateTracking(
     @Param('id') id: string,

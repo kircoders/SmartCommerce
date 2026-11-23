@@ -2,8 +2,10 @@
 
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiModule } from './ai/ai.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { AuthModule } from './auth/auth.module';
 import { CartModule } from './cart/cart.module';
@@ -56,6 +58,13 @@ import { UsersModule } from './users/users.module';
     DashboardModule,
     ReportsModule,
     AiModule,
+    AuditLogsModule,
+    // Phase 12: login attempt limit. Only routes with @UseGuards(ThrottlerGuard)
+    // are limited (login and register) - 5 requests per minute per IP.
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 5 }],
+      errorMessage: 'Too many attempts. Please wait a minute and try again.',
+    }),
   ],
 })
 export class AppModule implements NestModule {

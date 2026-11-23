@@ -28,6 +28,11 @@ import { CreateReturnDto } from './dto/create-return.dto';
 import { ReturnEvidenceEntity } from './entities/return-evidence.entity';
 import { ReturnEntity } from './entities/return.entity';
 import { ReturnsService } from './returns.service';
+import { Audit, field, shortId } from '../audit-logs/audit.decorator';
+import {
+  AuditAction,
+  AuditEntityType,
+} from '../audit-logs/entities/audit-log.entity';
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
@@ -42,6 +47,12 @@ export class ReturnsController {
   constructor(private readonly returnsService: ReturnsService) {}
 
   @Post()
+  @Audit({
+    action: AuditAction.RETURN_REQUESTED,
+    entityType: AuditEntityType.RETURN,
+    describe: ({ data }) =>
+      `Requested a return for order ${shortId(field(data, 'orderId'))}`,
+  })
   @ApiOperation({
     summary: 'Request a return for items from a delivered order',
   })

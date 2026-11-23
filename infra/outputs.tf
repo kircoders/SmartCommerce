@@ -19,6 +19,18 @@ output "s3_bucket_name" {
   value       = aws_s3_bucket.product_images.bucket
 }
 
+# Phase 12: read by up.ps1 to create the Bedrock VPC endpoint. One subnet
+# only - each subnet adds another ~$0.01/hour, and one is enough here.
+output "bedrock_endpoint_sg_id" {
+  description = "Security group for the Bedrock VPC endpoint (used by up.ps1)"
+  value       = aws_security_group.bedrock_endpoint.id
+}
+
+output "bedrock_endpoint_subnet_id" {
+  description = "Subnet the Bedrock VPC endpoint is created in (used by up.ps1)"
+  value       = sort(data.aws_subnets.apprunner.ids)[0]
+}
+
 output "s3_bucket_region" {
   description = "Region of the S3 bucket"
   value       = var.aws_region

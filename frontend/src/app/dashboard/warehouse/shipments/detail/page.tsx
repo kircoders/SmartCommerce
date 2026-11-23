@@ -160,6 +160,12 @@ function ShipmentDetailForm() {
         <Divider sx={{ mb: 3 }} />
 
         <Typography variant="h6" sx={{ mb: 2 }}>Update Status</Typography>
+        {/* Phase 12 - the customer cancelled; the backend rejects any status change. */}
+        {shipment.status === ShipmentStatus.CANCELLED && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            The customer cancelled this order - don&apos;t pack or ship it. Its stock has been returned to inventory.
+          </Alert>
+        )}
         <Box component="form" onSubmit={handleUpdateStatus} sx={{ mb: 4 }}>
           <FormControl fullWidth margin="normal">
             <InputLabel id="status-label">Status</InputLabel>
@@ -180,7 +186,7 @@ function ShipmentDetailForm() {
             variant="contained"
             fullWidth
             sx={{ mt: 2 }}
-            disabled={savingStatus || newStatus === shipment.status}
+            disabled={savingStatus || newStatus === shipment.status || shipment.status === ShipmentStatus.CANCELLED}
           >
             {savingStatus ? 'Saving...' : 'Update Status'}
           </Button>

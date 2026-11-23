@@ -37,11 +37,12 @@ import { Shipment, ShipmentStatus } from '@/types/shipment';
 
 const ALLOWED_ROLES = [UserRole.WAREHOUSE_OPERATOR, UserRole.OPERATIONS_MANAGER, UserRole.ADMIN];
 
-const STATUS_COLORS: Record<ShipmentStatus, 'default' | 'info' | 'warning' | 'success'> = {
+const STATUS_COLORS: Record<ShipmentStatus, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
   [ShipmentStatus.CREATED]: 'default',
   [ShipmentStatus.PACKED]: 'info',
   [ShipmentStatus.SHIPPED]: 'warning',
   [ShipmentStatus.DELIVERED]: 'success',
+  [ShipmentStatus.CANCELLED]: 'error',
 };
 
 export default function WarehouseShipmentsPage() {
@@ -95,6 +96,8 @@ export default function WarehouseShipmentsPage() {
           <MenuItem value={ShipmentStatus.PACKED}>Packed</MenuItem>
           <MenuItem value={ShipmentStatus.SHIPPED}>Shipped</MenuItem>
           <MenuItem value={ShipmentStatus.DELIVERED}>Delivered</MenuItem>
+          {/* Phase 12 - cancelled shipments are hidden from "All"; pick this to see them. */}
+          <MenuItem value={ShipmentStatus.CANCELLED}>Cancelled</MenuItem>
         </Select>
       </FormControl>
 

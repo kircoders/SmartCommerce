@@ -68,6 +68,18 @@ resource "aws_iam_role_policy" "apprunner_instance_policy" {
         Effect   = "Allow"
         Action   = ["ssm:GetParameter", "ssm:GetParameters"]
         Resource = "arn:aws:ssm:${var.aws_region}:452698428461:parameter/smartcommerce/*"
+      },
+      # Phase 12: the AI assistant (Phase 11) calls Claude Sonnet 4.6 through
+      # the US cross-region inference profile. Calling a profile needs
+      # permission on the profile itself AND on the model in every region
+      # the profile can route to (hence the * region). Only this one model.
+      {
+        Effect = "Allow"
+        Action = ["bedrock:InvokeModel"]
+        Resource = [
+          "arn:aws:bedrock:${var.aws_region}:452698428461:inference-profile/us.anthropic.claude-sonnet-4-6",
+          "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-6*"
+        ]
       }
     ]
   })

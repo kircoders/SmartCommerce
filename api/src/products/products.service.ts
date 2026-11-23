@@ -161,16 +161,21 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
-  // Object.assign only overwrites properties that actually exist on dto -
-  // this is what makes a *partial* update work correctly. Since
-  // UpdateProductDto makes every field optional, sending just { price: 24.99 }
-  // leaves name/description/isActive untouched on the existing entity.
+  // Partial update: only the fields actually sent are copied onto the
+  // product, so sending just { price: 24.99 } leaves name/description/
+  // isActive untouched. The undefined filter matters (fixed in Phase 12):
+  // with the ES2023 target, every DTO field exists on the object even when
+  // not sent (as undefined), and copying those blanked name/isActive in the
+  // response. The database was never affected - TypeORM skips undefined.
   // TypeORM generates an UPDATE (not an INSERT) here because `product`
   // already has an id from the findOne() above.
   async update(id: string, dto: UpdateProductDto): Promise<ProductEntity> {
     const product = await this.productRepo.findOne({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
-    Object.assign(product, dto);
+    const sent = Object.fromEntries(
+      Object.entries(dto).filter(([, value]) => value !== undefined),
+    );
+    Object.assign(product, sent);
     return this.productRepo.save(product);
   }
 

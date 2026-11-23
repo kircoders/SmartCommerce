@@ -9,6 +9,10 @@
 // (click the arrow) to show that order's items - product name, quantity,
 // unit price, line total - pulled from the same order.items the backend
 // now includes (see findAllForCustomer()'s relations option).
+//
+// Phase 12 - orders that haven't shipped yet (PLACED or PROCESSING) get a
+// "Cancel order" button, with an "are you sure?" popup first. Cancelling
+// gives the stock back; the backend double-checks it hasn't shipped.
 
 import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,11 +31,16 @@ import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Collapse from '@mui/material/Collapse';
 import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/user';
-import { getOrders } from '@/lib/api/orders';
+import { cancelOrder, getOrders } from '@/lib/api/orders';
 import { getShipmentForOrder } from '@/lib/api/shipments';
 import { Order, OrderStatus } from '@/types/order';
 import { Shipment } from '@/types/shipment';
@@ -64,6 +73,10 @@ export default function OrdersPage() {
   // no reason to make N extra requests for orders the customer never
   // bothers to open. Keyed by orderId so each row's fetch is independent.
   const [shipments, setShipments] = useState<Record<string, Shipment | undefined>>({});
+  // Phase 12 - the order waiting in the "are you sure?" popup, if any.
+  const [cancelling, setCancelling] = useState<Order | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -96,6 +109,25 @@ export default function OrdersPage() {
           // A missing shipment isn't worth its own error Alert here - the
           // item table below still renders fine without it.
         });
+    }
+  }
+
+  async function confirmCancel() {
+    if (!token || !cancelling) return;
+    setCancelBusy(true);
+    setCancelError('');
+    try {
+      const updated = await cancelOrder(token, cancelling.id);
+      setOrders((prev) => prev?.map((o) => (o.id === updated.id ? updated : o)) ?? prev);
+      // Re-fetch the shipment so its chip shows CANCELLED too.
+      getShipmentForOrder(token, updated.id)
+        .then((shipment) => setShipments((prev) => ({ ...prev, [updated.id]: shipment })))
+        .catch(() => {});
+      setCancelling(null);
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : 'Failed to cancel order');
+    } finally {
+      setCancelBusy(false);
     }
   }
 
@@ -195,6 +227,16 @@ export default function OrdersPage() {
                             {/* Phase 7 - opens Contact Support with this order pre-selected.
                                 Phase 8 - delivered orders can also be returned. */}
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                              {(order.status === OrderStatus.PLACED || order.status === OrderStatus.PROCESSING) && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => { setCancelError(''); setCancelling(order); }}
+                                >
+                                  Cancel order
+                                </Button>
+                              )}
                               {order.status === OrderStatus.DELIVERED && (
                                 <Button
                                   size="small"
@@ -223,6 +265,23 @@ export default function OrdersPage() {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog open={cancelling !== null} onClose={() => !cancelBusy && setCancelling(null)}>
+        <DialogTitle>Cancel this order?</DialogTitle>
+        <DialogContent>
+          {cancelError && <Alert severity="error" sx={{ mb: 2 }}>{cancelError}</Alert>}
+          <DialogContentText>
+            {cancelling &&
+              `Order #${cancelling.id.slice(0, 8)} ($${Number(cancelling.totalAmount).toFixed(2)}) will be cancelled and won't be shipped. This can't be undone.`}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelling(null)} disabled={cancelBusy}>Keep order</Button>
+          <Button color="error" variant="contained" onClick={confirmCancel} disabled={cancelBusy}>
+            {cancelBusy ? 'Cancelling...' : 'Cancel order'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -16,6 +16,9 @@ export enum ShipmentStatus {
   PACKED = 'PACKED',
   SHIPPED = 'SHIPPED',
   DELIVERED = 'DELIVERED',
+  // Phase 12: set only when the customer cancels the order before it ships
+  // (OrdersService.cancelOrder) - never by the warehouse. Final, like DELIVERED.
+  CANCELLED = 'CANCELLED',
 }
 
 // Maps to the "shipments" table - one row per order (OneToOne, matching

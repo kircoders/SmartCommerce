@@ -12,6 +12,8 @@ export enum ShipmentStatus {
   PACKED = 'PACKED',
   SHIPPED = 'SHIPPED',
   DELIVERED = 'DELIVERED',
+  // Phase 12: only set when the customer cancels the order before it ships.
+  CANCELLED = 'CANCELLED',
 }
 
 export interface Shipment {

@@ -2,7 +2,7 @@
 
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 import { InventoryEntity } from '../inventory/entities/inventory.entity';
 import { OrderItemEntity } from '../orders/entities/order-item.entity';
 import { OrderEntity, OrderStatus } from '../orders/entities/order.entity';
@@ -18,6 +18,7 @@ const ORDER_STATUS_FOR_SHIPMENT_STATUS: Record<ShipmentStatus, OrderStatus> = {
   [ShipmentStatus.PACKED]: OrderStatus.PROCESSING,
   [ShipmentStatus.SHIPPED]: OrderStatus.SHIPPED,
   [ShipmentStatus.DELIVERED]: OrderStatus.DELIVERED,
+  [ShipmentStatus.CANCELLED]: OrderStatus.CANCELLED,
 };
 
 @Injectable()
@@ -31,9 +32,11 @@ export class ShipmentsService {
 
   // Warehouse queue - every shipment, optionally narrowed to one status
   // (e.g. "show me only what's still CREATED and needs packing").
+  // Cancelled shipments (Phase 12) are hidden unless asked for by status -
+  // there's nothing left for the warehouse to do with them.
   async findQueue(status?: ShipmentStatus): Promise<ShipmentEntity[]> {
     return this.shipmentRepo.find({
-      where: status ? { status } : {},
+      where: status ? { status } : { status: Not(ShipmentStatus.CANCELLED) },
       relations: { order: true },
       order: { createdAt: 'ASC' },
     });
@@ -76,6 +79,11 @@ export class ShipmentsService {
       // remove the same stock from inventory a second time.
       if (shipment.status === ShipmentStatus.DELIVERED) {
         throw new BadRequestException('Shipment has already been delivered');
+      }
+      // Cancelled is final too (Phase 12) - the stock was already given back,
+      // so shipping it now would ship stock that's no longer reserved.
+      if (shipment.status === ShipmentStatus.CANCELLED) {
+        throw new BadRequestException('This order was cancelled by the customer');
       }
 
       shipment.status = dto.status;

@@ -18,6 +18,11 @@ import { UserRole } from '../users/entities/user.entity';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { RefundEntity } from './entities/refund.entity';
 import { RefundsService } from './refunds.service';
+import { Audit, field, money, shortId } from '../audit-logs/audit.decorator';
+import {
+  AuditAction,
+  AuditEntityType,
+} from '../audit-logs/entities/audit-log.entity';
 
 // Viewing a refund: anyone who can see returns on the staff side. Issuing
 // one: OPERATIONS_MANAGER and ADMIN only - the method-level @Roles on
@@ -31,6 +36,12 @@ export class RefundsController {
   constructor(private readonly refundsService: RefundsService) {}
 
   @Post()
+  @Audit({
+    action: AuditAction.REFUND_PROCESSED,
+    entityType: AuditEntityType.REFUND,
+    describe: ({ data }) =>
+      `Refund of ${money(field(data, 'amount'))} for return ${shortId(field(data, 'returnId'))} (${field(data, 'status')})`,
+  })
   @Roles(UserRole.OPERATIONS_MANAGER, UserRole.ADMIN)
   @ApiOperation({
     summary:

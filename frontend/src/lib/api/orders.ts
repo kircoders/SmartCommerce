@@ -23,6 +23,17 @@ export async function placeOrder(token: string): Promise<Order> {
   return json.data;
 }
 
+// Phase 12 - only works before the order ships; the backend says why if not.
+export async function cancelOrder(token: string, orderId: string): Promise<Order> {
+  const res = await fetch(`${API_URL}/orders/${orderId}/cancel`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to cancel order');
+  return json.data;
+}
+
 export async function getOrders(token: string): Promise<Order[]> {
   const res = await fetch(`${API_URL}/orders`, { headers: authHeaders(token) });
   const json = await res.json();

@@ -24,6 +24,11 @@ import { UpdateIncidentStatusDto } from './dto/update-incident-status.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
 import { IncidentEntity } from './entities/incident.entity';
 import { IncidentSummary, IncidentsService } from './incidents.service';
+import { Audit, field } from '../audit-logs/audit.decorator';
+import {
+  AuditAction,
+  AuditEntityType,
+} from '../audit-logs/entities/audit-log.entity';
 
 // OPERATIONS_MANAGER and ADMIN only - every route, reads included.
 // Customers, support agents, and warehouse operators get 403.
@@ -36,6 +41,12 @@ export class IncidentsController {
   constructor(private readonly incidentsService: IncidentsService) {}
 
   @Post()
+  @Audit({
+    action: AuditAction.INCIDENT_CREATED,
+    entityType: AuditEntityType.INCIDENT,
+    describe: ({ data }) =>
+      `Reported ${field(data, 'severity')} incident "${field(data, 'title')}"`,
+  })
   @ApiOperation({ summary: 'Create an incident (starts OPEN)' })
   async create(
     @CurrentUser() user: { id: string },
@@ -92,6 +103,15 @@ export class IncidentsController {
   }
 
   @Patch(':id/status')
+  @Audit({
+    // Only a change TO resolved is recorded; other status changes aren't.
+    action: ({ data }) =>
+      field(data, 'status') === 'RESOLVED'
+        ? AuditAction.INCIDENT_RESOLVED
+        : null,
+    entityType: AuditEntityType.INCIDENT,
+    describe: ({ data }) => `Resolved incident "${field(data, 'title')}"`,
+  })
   @ApiOperation({
     summary: 'Change status (RESOLVED stores the resolved date)',
   })
@@ -104,6 +124,11 @@ export class IncidentsController {
   }
 
   @Patch(':id/resolve')
+  @Audit({
+    action: AuditAction.INCIDENT_RESOLVED,
+    entityType: AuditEntityType.INCIDENT,
+    describe: ({ data }) => `Resolved incident "${field(data, 'title')}"`,
+  })
   @ApiOperation({ summary: 'Mark resolved - shortcut for status RESOLVED' })
   async resolve(
     @Param('id', ParseUUIDPipe) id: string,

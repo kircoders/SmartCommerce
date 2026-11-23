@@ -5,9 +5,9 @@ import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CART_STATUS_IDS, CartEntity, CartStatus } from '../cart/entities/cart.entity';
 import { InventoryEntity } from '../inventory/entities/inventory.entity';
-import { ShipmentEntity } from '../shipments/entities/shipment.entity';
+import { ShipmentEntity, ShipmentStatus } from '../shipments/entities/shipment.entity';
 import { OrderItemEntity } from './entities/order-item.entity';
-import { OrderEntity } from './entities/order.entity';
+import { OrderEntity, OrderStatus } from './entities/order.entity';
 
 // Deliberately self-contained for now, reading Cart/Inventory data through
 // its own repositories rather than calling CartService/InventoryService -
@@ -114,6 +114,69 @@ export class OrdersService {
 
       return savedOrder;
     });
+  }
+
+  // Phase 12. A customer can cancel their own order until it ships (shipment
+  // still CREATED or PACKED). Order status, shipment status, and stock all
+  // change together in one transaction:
+  //   - order    -> CANCELLED
+  //   - shipment -> CANCELLED (drops off the warehouse queue)
+  //   - stock    -> reserved goes back to available (undoes placeOrder;
+  //                 total never changed, so it stays the same)
+  async cancelOrder(customerId: string, orderId: string): Promise<OrderEntity> {
+    await this.dataSource.transaction(async (manager) => {
+      // Ownership first - someone else's order is a plain 404, so nobody
+      // can learn which order IDs exist.
+      const order = await manager.findOne(OrderEntity, {
+        where: { id: orderId, customerId },
+      });
+      if (!order) throw new NotFoundException('Order not found');
+
+      // Row-locked, same as ShipmentsService.updateStatus() - if the
+      // warehouse marks it SHIPPED at the same moment, one of the two waits
+      // for the other, then sees the new status. Both lock the shipment
+      // first, so they can't deadlock.
+      const shipment = await manager.findOne(ShipmentEntity, {
+        where: { orderId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!shipment) throw new NotFoundException('Shipment not found');
+
+      if (shipment.status === ShipmentStatus.CANCELLED) {
+        throw new BadRequestException('This order is already cancelled');
+      }
+      if (
+        shipment.status === ShipmentStatus.SHIPPED ||
+        shipment.status === ShipmentStatus.DELIVERED
+      ) {
+        throw new BadRequestException(
+          'This order has already shipped and can no longer be cancelled - request a return once it arrives',
+        );
+      }
+
+      shipment.status = ShipmentStatus.CANCELLED;
+      await manager.save(shipment);
+      await manager.update(OrderEntity, orderId, { status: OrderStatus.CANCELLED });
+
+      // Give the stock back - the exact reverse of placeOrder()'s reserve.
+      const items = await manager.find(OrderItemEntity, { where: { orderId } });
+      for (const item of items) {
+        await manager.decrement(
+          InventoryEntity,
+          { productId: item.productId },
+          'quantityReserved',
+          item.quantity,
+        );
+        await manager.increment(
+          InventoryEntity,
+          { productId: item.productId },
+          'quantityAvailable',
+          item.quantity,
+        );
+      }
+    });
+
+    return this.findOneForCustomer(customerId, orderId);
   }
 
   async findAllForCustomer(customerId: string): Promise<OrderEntity[]> {
