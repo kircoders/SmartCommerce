@@ -124,6 +124,7 @@ Warehouse side:
 | **My Orders** (`/orders`, customer) | "Cancel order" button on PLACED/PROCESSING orders → "Cancel this order?" popup (Keep order / Cancel order). |
 | **Warehouse Shipments** | Red CANCELLED chip and a "Cancelled" filter. |
 | **Shipment Details** | Warning banner on cancelled shipments; status update disabled. |
+| **AI chat** (`/support`, customer) | Chat history now survives a refresh: saved in the browser's localStorage (`lib/chat-history.ts`), one key per user (`aiChat:<userId>`), newest 50 turns. "Clear chat" button starts over; logout (`useAuth.clearAuth`) deletes all saved chats so a shared computer keeps nothing. Still nothing stored on the server. |
 
 Files: `types/audit-log.ts`, `lib/api/audit-logs.ts`, `cancelOrder()` in `lib/api/orders.ts`, `CANCELLED` in `types/shipment.ts`.
 

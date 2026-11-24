@@ -6,8 +6,9 @@
 // The customer's AI chat box on the Support page. Each question is sent to
 // POST /api/ai/customer/chat together with the conversation so far (the
 // server doesn't store chats), and the reply is added to the list.
-// The chat lives only in this component's state - refreshing the page
-// starts a new conversation.
+//
+// Phase 12: the chat is saved in the browser (lib/chat-history.ts), so a
+// refresh keeps it. "Clear chat" starts over; logging out deletes it.
 
 import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
@@ -18,6 +19,7 @@ import Paper from '@mui/material/Paper';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import { customerChat } from '@/lib/api/ai';
+import { loadChatHistory, saveChatHistory } from '@/lib/chat-history';
 import { ChatTurn, MAX_CHAT_HISTORY, MAX_CHAT_MESSAGE_LENGTH } from '@/types/ai';
 
 const GREETING =
@@ -25,14 +27,29 @@ const GREETING =
 
 interface CustomerChatProps {
   token: string;
+  userId: string;
 }
 
-export default function CustomerChat({ token }: CustomerChatProps) {
-  const [turns, setTurns] = useState<ChatTurn[]>([]);
+export default function CustomerChat({ token, userId }: CustomerChatProps) {
+  // Start from the saved chat. Reading localStorage here is safe: this
+  // component only renders after login, which only happens in the browser.
+  // The Support page gives it key={userId}, so a different user gets a
+  // fresh component (and their own saved chat).
+  const [turns, setTurns] = useState<ChatTurn[]>(() => loadChatHistory(userId));
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Save after every change.
+  useEffect(() => {
+    saveChatHistory(userId, turns);
+  }, [turns, userId]);
+
+  function clearChat() {
+    setTurns([]);
+    setError('');
+  }
 
   // Keep the newest message in view.
   useEffect(() => {
@@ -66,7 +83,14 @@ export default function CustomerChat({ token }: CustomerChatProps) {
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="h6">Ask the AI assistant</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6">Ask the AI assistant</Typography>
+        {turns.length > 0 && (
+          <Button size="small" onClick={clearChat} disabled={sending}>
+            Clear chat
+          </Button>
+        )}
+      </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Answers come from your own account. The assistant can&apos;t make changes - for that, contact support.
       </Typography>

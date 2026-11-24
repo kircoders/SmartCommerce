@@ -27,6 +27,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { User } from '@/types/user';
+import { clearAllChatHistory } from '@/lib/chat-history';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -53,6 +54,9 @@ export function useAuth() {
   const clearAuth = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Phase 12: the saved AI chat goes too, so the next person on this
+    // browser can't read it.
+    clearAllChatHistory();
     setToken(null);
     setUser(null);
   }, []);

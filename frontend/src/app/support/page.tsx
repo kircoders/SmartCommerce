@@ -116,9 +116,9 @@ export default function MyTicketsPage() {
       )}
 
       {/* Phase 11 - the AI chat, below the ticket list. */}
-      {token && (
+      {token && user && (
         <Box sx={{ mt: 4, maxWidth: 720 }}>
-          <CustomerChat token={token} />
+          <CustomerChat key={user.id} token={token} userId={user.id} />
         </Box>
       )}
     </Box>
